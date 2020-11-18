@@ -4,18 +4,17 @@ CREATE TYPE status_enum AS ENUM ('pending', 'confirmed', 'rejected', 'onfork');
 
 CREATE TABLE IF NOT EXISTS cosmos.blocks
 (
-    "id" BIGSERIAL PRIMARY KEY,
-    "chain_id" varchar(64) NOT NULL,
-    "hash" varchar(64) NOT NULL,
-    "height" bigint NOT NULL,
-    "time" timestamp WITH TIME ZONE NOT NULL,
-    "num_tx" bigint NOT NULL,
-    "total_txs" bigint,
+    "hash"            varchar(64)              NOT NULL PRIMARY KEY,
+    "chain_id"        varchar(64)              NOT NULL,
+    "height"          bigint                   NOT NULL,
+    "time"            timestamp WITH TIME ZONE NOT NULL,
+    "num_tx"          bigint                   NOT NULL,
+    "total_txs"       bigint,
     "last_block_hash" varchar(64),
-    "validator" varchar(64),
-    "txs_hash" varchar(128)[],
-    "status" status_enum,
-    unique(hash, height)
+    "validator"       varchar(64),
+    "txs_hash"        varchar(128)[],
+    "status"          status_enum,
+    unique (hash, height)
 );
 
 -- Fix for unquoting varchar json
@@ -30,19 +29,45 @@ CREATE CAST (varchar as jsonb) WITH FUNCTION varchar_to_jsonb(varchar) AS IMPLIC
 
 CREATE TABLE IF NOT EXISTS cosmos._blocks
 (
-    "id" BIGSERIAL PRIMARY KEY,
-    "chain_id" varchar(64) NOT NULL,
-    "hash" varchar(64) NOT NULL,
-    "height" bigint NOT NULL,
-    "time" timestamp WITH TIME ZONE NOT NULL,
-    "num_tx" bigint NOT NULL,
-    "total_txs" bigint,
+    "hash"            varchar(64)              NOT NULL PRIMARY KEY,
+    "chain_id"        varchar(64)              NOT NULL,
+    "height"          bigint                   NOT NULL,
+    "time"            timestamp WITH TIME ZONE NOT NULL,
+    "num_tx"          bigint                   NOT NULL,
+    "total_txs"       bigint,
     "last_block_hash" varchar(64),
-    "validator" varchar(64),
-    "txs_hash" varchar(128)[],
-    "status" status_enum,
-    unique(hash, height)
+    "validator"       varchar(64),
+    "txs_hash"        varchar(128)[],
+    "status"          status_enum
 );
+
+
+CREATE TABLE IF NOT EXISTS cosmos.blocks_0
+(
+    UNIQUE (hash),
+    CHECK ( height BETWEEN 0 AND 100000)
+) INHERITS (cosmos.blocks);
+
+CREATE INDEX blocks_0_height_idx ON cosmos.blocks_0 (height);
+CREATE INDEX blocks_0_chain_id_idx ON cosmos.blocks_0 (chain_id);
+CREATE INDEX blocks_0_time_idx ON cosmos.blocks_0 (time);
+CREATE INDEX blocks_0_status_idx ON cosmos.blocks_0 (status);
+
+CREATE OR REPLACE FUNCTION blocks_insert_trigger()
+    RETURNS TRIGGER AS
+$$
+BEGIN
+    INSERT INTO cosmos.blocks_0 VALUES (NEW.*) ON CONFLICT DO NOTHING;
+    RETURN NULL;
+END;
+$$
+    LANGUAGE plpgsql;
+
+CREATE TRIGGER insert_blocks_trigger
+    BEFORE INSERT
+    ON cosmos.blocks
+    FOR EACH ROW
+EXECUTE FUNCTION blocks_insert_trigger();
 
 
 -- Blocks
@@ -70,8 +95,7 @@ BEGIN
             NEW."last_block_hash",
             NEW."validator",
             NEW."txs_hash",
-            NEW."status"
-    )
+            NEW."status")
     ON CONFLICT DO NOTHING;
 
     RETURN NEW;
@@ -93,7 +117,7 @@ CREATE OR REPLACE FUNCTION cosmos.sink_trim_blocks_after_insert()
     RETURNS trigger AS
 $$
 BEGIN
-    DELETE FROM cosmos._blocks WHERE "hash" = NEW."hash";
+    DELETE FROM cosmos._blocks WHERE "hash" = NEW."hash" AND "chain_id" = NEW."chain_id" AND "height" = NEW."height";
     RETURN NEW;
 END ;
 

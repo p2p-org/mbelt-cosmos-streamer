@@ -1,17 +1,17 @@
 {
-  "name": "blocks_stream_avro_sink",
+  "name": "messages_stream_avro_sink",
   "config": {
     "connector.class": "io.confluent.connect.jdbc.JdbcSinkConnector",
     "key.converter": "org.apache.kafka.connect.storage.StringConverter",
     "value.converter": "io.confluent.connect.avro.AvroConverter",
-    "topics": "BLOCKS_STREAM_AVRO",
+    "topics": "MESSAGES_STREAM_AVRO",
     "connection.url": "jdbc:postgresql://db:5432/raw?user=sink&password=Ekj31R2_03S2IwLoPsWVa28_sMx_xoS",
     "dialect.name": "PostgreSqlDatabaseDialect",
     "insert.mode": "INSERT",
-    "table.name.format": "cosmos._blocks",
+    "table.name.format": "cosmos._messages",
     "errors.tolerance": "all",
     "pk.mode": "record_value",
-    "pk.fields": "hash",
+    "pk.fields": "id",
     "auto.create": "false",
     "auto.evolve": "false",
     "value.converter.schema.registry.url": "http://schema-registry:8081"
