@@ -22,10 +22,10 @@ CREATE TABLE IF NOT EXISTS cosmos._messages
     tx_index      int,
     msg_index     int,
     msg_type      varchar(64) NOT NULL,
-    msg_info      jsonb,
+    msg_info      text,
     logs          text,
-    events        jsonb,
-    external_info jsonb -- TODO Is it necessary at all?
+    events        text,
+    external_info text -- TODO Is it necessary at all?
 );
 -- TODO проверять по параметрам tx_hash, block_hash  msg_index
 -- CREATE TABLE IF NOT EXISTS cosmos.messages_0
@@ -77,7 +77,7 @@ BEGIN
             NEW."tx_index",
             NEW."msg_index",
             NEW."msg_type",
-            NEW."msg_info",
+            NEW."msg_info"::jsonb,
             NEW."logs",
             NEW."events"::jsonb,
             NEW."external_info"::jsonb)

@@ -32,13 +32,13 @@ CREATE TABLE IF NOT EXISTS cosmos._blocks
     "hash"            varchar(64)              NOT NULL PRIMARY KEY,
     "chain_id"        varchar(64)              NOT NULL,
     "height"          bigint                   NOT NULL,
-    "time"            timestamp WITH TIME ZONE NOT NULL,
+    "time"            BIGINT NOT NULL,
     "num_tx"          bigint                   NOT NULL,
     "total_txs"       bigint,
     "last_block_hash" varchar(64),
     "validator"       varchar(64),
-    "txs_hash"        varchar(128)[],
-    "status"          status_enum
+    "txs_hash"        TEXT,
+    "status"          varchar(64)
 );
 
 
@@ -53,7 +53,7 @@ CREATE INDEX blocks_0_chain_id_idx ON cosmos.blocks_0 (chain_id);
 CREATE INDEX blocks_0_time_idx ON cosmos.blocks_0 (time);
 CREATE INDEX blocks_0_status_idx ON cosmos.blocks_0 (status);
 
-CREATE OR REPLACE FUNCTION blocks_insert_trigger()
+CREATE OR REPLACE FUNCTION cosmos.blocks_insert_trigger()
     RETURNS TRIGGER AS
 $$
 BEGIN
@@ -63,21 +63,20 @@ END;
 $$
     LANGUAGE plpgsql;
 
-CREATE TRIGGER insert_blocks_trigger
-    BEFORE INSERT
-    ON cosmos.blocks
-    FOR EACH ROW
-EXECUTE FUNCTION blocks_insert_trigger();
+-- CREATE TRIGGER insert_blocks_trigger
+--     BEFORE INSERT
+--     ON cosmos.blocks
+--     FOR EACH ROW
+-- EXECUTE FUNCTION cosmos.blocks_insert_trigger();
 
 
 -- Blocks
-
 CREATE OR REPLACE FUNCTION cosmos.sink_blocks_insert()
     RETURNS trigger AS
 $$
 BEGIN
-    INSERT INTO cosmos.blocks("chain_id",
-                              "hash",
+    INSERT INTO cosmos.blocks("hash",
+                              "chain_id",
                               "height",
                               "time",
                               "num_tx",
@@ -86,16 +85,16 @@ BEGIN
                               "validator",
                               "txs_hash",
                               "status")
-    VALUES (NEW."chain_id",
-            NEW."hash",
+    VALUES (NEW."hash",
+            NEW."chain_id",
             NEW."height",
             to_timestamp(NEW."time"),
             NEW."num_tx",
             NEW."total_txs",
             NEW."last_block_hash",
             NEW."validator",
-            NEW."txs_hash",
-            NEW."status")
+            NEW."txs_hash"::varchar(256)[],
+            NEW."status"::status_enum)
     ON CONFLICT DO NOTHING;
 
     RETURN NEW;
@@ -117,7 +116,7 @@ CREATE OR REPLACE FUNCTION cosmos.sink_trim_blocks_after_insert()
     RETURNS trigger AS
 $$
 BEGIN
-    DELETE FROM cosmos._blocks WHERE "hash" = NEW."hash" AND "chain_id" = NEW."chain_id" AND "height" = NEW."height";
+    DELETE FROM cosmos._blocks WHERE "hash" = NEW."hash" AND "chain_id" = NEW."chain_id" AND "height" = NEW."height"
     RETURN NEW;
 END ;
 

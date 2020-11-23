@@ -12,10 +12,8 @@ require (
 	github.com/jinzhu/configor v1.2.0
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/lib/pq v1.8.0
-	github.com/micro/go-micro v1.18.0
-	github.com/micro/go-plugins/broker/kafka v0.0.0-20200119172437-4fe21aa238fd
 	github.com/prometheus/common v0.9.1
-	github.com/segmentio/kafka-go v0.4.8
+	github.com/segmentio/kafka-go v0.3.7
 	github.com/spf13/cobra v1.1.1
 	github.com/spf13/viper v1.7.1
 	github.com/tendermint/go-amino v0.15.1 // indirect

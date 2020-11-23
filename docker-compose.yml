@@ -23,7 +23,7 @@ services:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
-      # KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker:29092,PLAINTEXT_HOST://:9092
+#      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker:29092,PLAINTEXT_HOST://:9092
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://:29092,PLAINTEXT_HOST://:9092
       KAFKA_METRIC_REPORTERS: io.confluent.metrics.reporter.ConfluentMetricsReporter
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
@@ -186,13 +186,33 @@ services:
     hostname: postgres
     ports:
       - "5432:5432"
-    depends_on:
-      - zookeeper
-      - broker
-      - schema-registry
-      - connect
-      - ksqldb-server
     environment:
       POSTGRES_PASSWORD: Ekj31R2_03S2IwLoPsWVa28_sMx_xoS
       POSTGRES_USER: sink
       POSTGRES_DB: raw
+
+  cosmos-streamer-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: always
+    container_name: filecoin-cosmos-worker
+    #    depends_on:
+    #      - zookeeper
+    #      - broker
+    #      - schema-registry
+    #      - connect
+    #      - ksqldb-server
+    environment:
+      NODE_HOST: 167.233.15.85
+      NODE_WS_PORT: 26657
+      NODE_LCD_PORT: 1317
+      KAFKA_HOSTS: '[broker:9092]'
+      PG_URL: postgres://sink:Ekj31R2_03S2IwLoPsWVa28_sMx_xoS@db:5432/raw?sslmode=disable
+
+networks:
+  default:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.16.57.0/24

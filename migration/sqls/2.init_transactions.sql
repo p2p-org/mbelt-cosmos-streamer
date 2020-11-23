@@ -18,20 +18,20 @@ CREATE TABLE IF NOT EXISTS cosmos.transactions
 
 CREATE TABLE IF NOT EXISTS cosmos._transactions
 (
-    tx_hash       varchar(64)              NOT NULL PRIMARY KEY,
-    chain_id      varchar(64)              NOT NULL,
-    block_height  bigint                   NOT NULL,
-    block_hash    varchar(64)              NOT NULL,
-    time          timestamp WITH TIME ZONE NOT NULL,
+    tx_hash       varchar(64) NOT NULL PRIMARY KEY,
+    chain_id      varchar(64) NOT NULL,
+    block_height  bigint      NOT NULL,
+    block_hash    varchar(64) NOT NULL,
+    time          bigint      NOT NULL,
     tx_index      int,
     logs          text,
-    events        jsonb,
-    msgs          jsonb,
-    fee           jsonb,
-    signatures    jsonb,
+    events        text,
+    msgs          text,
+    fee           text,
+    signatures    text,
     memo          varchar(1024),
-    status        status_enum,
-    external_info jsonb -- TODO Is it necessary at all?
+    status        varchar(64),
+    external_info text -- TODO Is it necessary at all?
 );
 
 CREATE TABLE IF NOT EXISTS cosmos.transactions_0
@@ -65,7 +65,6 @@ EXECUTE FUNCTION transactions_insert_trigger();
 
 
 
-
 CREATE OR REPLACE FUNCTION cosmos.sink_transactions_insert()
     RETURNS trigger AS
 $$
@@ -96,7 +95,7 @@ BEGIN
             NEW."fee"::jsonb,
             NEW."signatures"::jsonb,
             NEW."memo",
-            NEW."status",
+            NEW."status"::status_enum,
             NEW."external_info"::jsonb)
     ON CONFLICT DO NOTHING;
 

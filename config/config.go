@@ -7,6 +7,6 @@ type Config struct {
 		LCDPort       int    `default:"1317" env:"NODE_LCD_PORT"`
 		RPCPort       int    `default:"26657" env:"NODE_RPC_PORT"`
 	}
-	KafkaHost string `required:"true" env:"KAFKA_HOST"`
-	PgUrl     string `required:"true" env:"PG_URL"`
+	KafkaHosts []string `required:"true" env:"KAFKA_HOSTS"`
+	PgUrl      string   `required:"true" env:"PG_URL"`
 }

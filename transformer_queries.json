@@ -1,0 +1,4 @@
+{
+  "ksql": "CREATE STREAM BLOCKS_STREAM (\n  \"hash\" VARCHAR,\n  \"chain_id\" VARCHAR,\n  \"height\" BIGINT,\n  \"time\" BIGINT,\n  \"num_tx\" BIGINT,\n  \"total_txs\" BIGINT,\n  \"last_block_hash\" VARCHAR,\n  \"validator\" VARCHAR,\n  \"txs_hash\" VARCHAR,\n  \"status\" VARCHAR\n) WITH (kafka_topic='blocks_stream', value_format='JSON');\n\nCREATE STREAM BLOCKS_STREAM_AVRO WITH(PARTITIONS=1, VALUE_FORMAT='AVRO', REPLICAS=1) AS SELECT *\nFROM BLOCKS_STREAM EMIT CHANGES;",
+  "streamsProperties": {}
+}
