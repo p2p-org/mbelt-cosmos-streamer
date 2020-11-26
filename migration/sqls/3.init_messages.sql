@@ -10,8 +10,7 @@ CREATE TABLE IF NOT EXISTS cosmos.messages
     msg_info      jsonb,
     logs          text,
     events        jsonb,
-    external_info jsonb, -- TODO Is it necessary at all?
-    unique (tx_hash, block_hash)
+    external_info jsonb -- TODO Is it necessary at all?
 );
 
 CREATE TABLE IF NOT EXISTS cosmos._messages

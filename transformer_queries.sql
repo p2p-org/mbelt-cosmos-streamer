@@ -21,31 +21,29 @@ CREATE STREAM TRANSACTIONS_STREAM (
    "block_hash" VARCHAR,
    "time" BIGINT,
    "tx_index" BIGINT,
-   "logs" TEXT,
-   "events" TEXT,
-   "msgs" TEXT,
-   "fee" TEXT,
-   "signatures" TEXT,
-   "memo" TEXT,
+   "logs" STRING,
+   "events" STRING,
+   "msgs" STRING,
+   "fee" STRING,
+   "signatures" STRING,
+   "memo" STRING,
    "status" STRING,
-   "external_info" TEXT
+   "external_info" STRING
 ) WITH (kafka_topic='transactions_stream', value_format='JSON');
 
 CREATE STREAM TRANSACTIONS_STREAM_AVRO WITH(PARTITIONS=1, REPLICAS=1, VALUE_FORMAT='AVRO') AS SELECT *
 FROM TRANSACTIONS_STREAM EMIT CHANGES;
 
-
 CREATE STREAM MESSAGES_STREAM (
-  "cid" VARCHAR,
-  "block_cid" VARCHAR,
-  "method" INTEGER,
-  "from" VARCHAR,
-  "to" VARCHAR,
-  "value" BIGINT,
-  "gas" VARCHAR,
-  "params" STRING,
-  "data" VARCHAR,
-  "block_time" BIGINT
+  "block_hash" VARCHAR,
+  "tx_hash" VARCHAR,
+  "tx_index" BIGINT,
+  "msg_index" BIGINT,
+  "msg_type" VARCHAR,
+  "msg_info" STRING,
+  "logs" STRING,
+  "events" STRING,
+  "external_info" STRING
 ) WITH (kafka_topic='messages_stream', value_format='JSON');
 
 CREATE STREAM MESSAGES_STREAM_AVRO WITH(PARTITIONS=1, REPLICAS=1, VALUE_FORMAT='AVRO') AS SELECT *

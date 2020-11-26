@@ -5,6 +5,7 @@ import (
 	"github.com/p2p-org/mbelt-cosmos-streamer/datastore"
 	"github.com/p2p-org/mbelt-cosmos-streamer/datastore/pg"
 	"github.com/p2p-org/mbelt-cosmos-streamer/services/blocks"
+	"github.com/p2p-org/mbelt-cosmos-streamer/services/transactions"
 )
 
 var (
@@ -12,9 +13,8 @@ var (
 )
 
 type ServiceProvider struct {
-	blocksService *blocks.Service
-	// messagesService  *messages.MessagesService
-	// processorService *processor.ProcessorService
+	blocksService       *blocks.Service
+	transactionsService *transactions.Service
 }
 
 func (p *ServiceProvider) Init(config *config.Config, kafkaDs *datastore.KafkaDatastore, pgDs *pg.PgDatastore) error {
@@ -24,17 +24,10 @@ func (p *ServiceProvider) Init(config *config.Config, kafkaDs *datastore.KafkaDa
 		return err
 	}
 
-	// p.messagesService, err = messages.Init(config, kafkaDs, apiClient)
-	//
-	// if err != nil {
-	// 	return err
-	// }
-	//
-	// p.processorService, err = processor.Init(config, kafkaDs, apiClient)
-	//
-	// if err != nil {
-	// 	return err
-	// }
+	p.transactionsService, err = transactions.Init(config, kafkaDs, pgDs)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -43,14 +36,9 @@ func (p *ServiceProvider) BlocksService() *blocks.Service {
 	return p.blocksService
 }
 
-//
-// func (p *ServiceProvider) MessagesService() *messages.MessagesService {
-// 	return p.messagesService
-// }
-//
-// func (p *ServiceProvider) ProcessorService() *processor.ProcessorService {
-// 	return p.processorService
-// }
+func (p *ServiceProvider) TransactionsService() *transactions.Service {
+	return p.transactionsService
+}
 
 func App() *ServiceProvider {
 	return &provider

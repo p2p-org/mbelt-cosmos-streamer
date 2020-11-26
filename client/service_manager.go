@@ -10,6 +10,7 @@ type Manager struct {
 	// eventManager  *events.EventManager
 	// cacheManager  *cache.CacheManager
 	BlockProcessing func(*types.EventDataNewBlock)
+	TxProcessing    func(tx *types.EventDataTx)
 }
 
 func (m *Manager) Start(cfg *config.Config) error {
@@ -25,8 +26,12 @@ func (m *Manager) Start(cfg *config.Config) error {
 		return err
 	}
 
-	go m.nodeConnector.SubscribeBlock(m.BlockProcessing)
-	// go m.nodeConnector.SubscribeTxs()
+	if m.BlockProcessing != nil {
+		go m.nodeConnector.SubscribeBlock(m.BlockProcessing)
+	}
+	if m.TxProcessing != nil {
+		go m.nodeConnector.SubscribeTxs(m.TxProcessing)
+	}
 	// go m.cacheManager.ProcesingBlocks(m.nodeConnector.BlockChan)
 	// go m.cacheManager.ProcesingTxs(m.nodeConnector.TxChan)
 	// m.nodeConnector.ResendBlock(3108949)

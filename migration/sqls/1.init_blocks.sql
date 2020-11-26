@@ -53,15 +53,14 @@ CREATE INDEX blocks_0_chain_id_idx ON cosmos.blocks_0 (chain_id);
 CREATE INDEX blocks_0_time_idx ON cosmos.blocks_0 (time);
 CREATE INDEX blocks_0_status_idx ON cosmos.blocks_0 (status);
 
-CREATE OR REPLACE FUNCTION cosmos.blocks_insert_trigger()
-    RETURNS TRIGGER AS
-$$
-BEGIN
-    INSERT INTO cosmos.blocks_0 VALUES (NEW.*) ON CONFLICT DO NOTHING;
-    RETURN NULL;
-END;
-$$
-    LANGUAGE plpgsql;
+-- CREATE OR REPLACE FUNCTION cosmos.blocks_insert_trigger() RETURNS TRIGGER AS
+-- $$
+-- BEGIN
+--     INSERT INTO cosmos.blocks_0 VALUES (NEW.*) ON CONFLICT DO NOTHING;
+--     RETURN NULL;
+-- END;
+-- $$
+--     LANGUAGE plpgsql;
 
 -- CREATE TRIGGER insert_blocks_trigger
 --     BEFORE INSERT
@@ -116,7 +115,7 @@ CREATE OR REPLACE FUNCTION cosmos.sink_trim_blocks_after_insert()
     RETURNS trigger AS
 $$
 BEGIN
-    DELETE FROM cosmos._blocks WHERE "hash" = NEW."hash" AND "chain_id" = NEW."chain_id" AND "height" = NEW."height"
+    DELETE FROM cosmos._blocks WHERE "hash" = NEW."hash" AND "chain_id" = NEW."chain_id" AND "height" = NEW."height";
     RETURN NEW;
 END ;
 

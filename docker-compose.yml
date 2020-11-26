@@ -196,7 +196,7 @@ services:
       context: .
       dockerfile: Dockerfile
     restart: always
-    container_name: filecoin-cosmos-worker
+    container_name: cosmos-streamer-worker
     #    depends_on:
     #      - zookeeper
     #      - broker

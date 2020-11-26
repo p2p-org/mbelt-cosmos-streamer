@@ -31,7 +31,7 @@ func Init(config *config.Config) (*KafkaDatastore, error) {
 		// pushChan:     make(chan interface{}),
 	}
 	// , TopicMessages
-	for _, topic := range []string{TopicBlocks} {
+	for _, topic := range []string{TopicBlocks, TopicTransactions, TopicMessages} {
 		writer := kafka.NewWriter(kafka.WriterConfig{
 			Brokers:  ds.config.KafkaHosts,
 			Topic:    topic,

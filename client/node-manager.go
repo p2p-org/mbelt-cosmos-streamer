@@ -80,7 +80,7 @@ func (nm *NodeManager) SubscribeBlock(processingBlock func(*types.EventDataNewBl
 
 }
 
-func (nm *NodeManager) SubscribeTxs() {
+func (nm *NodeManager) SubscribeTxs(processingTx func(tx *types.EventDataTx)) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
 	txs, err := nm.wsClient.Subscribe(ctx, "test-client", txQuery)
@@ -89,7 +89,9 @@ func (nm *NodeManager) SubscribeTxs() {
 		// return err
 	}
 	for tx := range txs {
-		go processingTxWithEvents(tx.Data.(types.EventDataTx), nm.TxChan)
+		log.Infoln("tx new -> ", fmt.Sprintf("%X %d", tx.Data.(types.EventDataTx).Tx.Hash(), tx.Data.(types.EventDataTx).Height))
+		newTx := tx.Data.(types.EventDataTx)
+		go processingTx(&newTx)
 	}
 
 }

@@ -22,7 +22,8 @@ func InitServices(config *config.Config) error {
 	}
 
 	mng := client.Manager{
-		BlockProcessing: App().blocksService.Push,
+		BlockProcessing: App().BlocksService().Push,
+		TxProcessing:    App().TransactionsService().Push,
 	}
 	if err = mng.Start(config); err != nil {
 		return err

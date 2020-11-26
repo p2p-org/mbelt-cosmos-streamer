@@ -33,35 +33,35 @@ CREATE TABLE IF NOT EXISTS cosmos._transactions
     status        varchar(64),
     external_info text -- TODO Is it necessary at all?
 );
-
-CREATE TABLE IF NOT EXISTS cosmos.transactions_0
-(
-    UNIQUE (block_hash, tx_hash),
-    CHECK (block_height BETWEEN 0 AND 50000 )
-) INHERITS (cosmos.transactions);
-
-CREATE INDEX transactions_0_block_height_idx ON cosmos.transactions_0 (block_height);
-CREATE INDEX transactions_0_chain_id_idx ON cosmos.transactions_0 (chain_id);
-CREATE INDEX transactions_0_status_idx ON cosmos.transactions_0 (status);
-
-CREATE INDEX transactions_0_events_params_idx ON cosmos.transactions_0 USING GIN ((events -> 'Params') jsonb_path_ops);
-CREATE INDEX transactions_0_msgs_idx ON cosmos.transactions_0 USING GIN (msgs jsonb_path_ops);
-
-CREATE OR REPLACE FUNCTION transactions_insert_trigger()
-    RETURNS TRIGGER AS
-$$
-BEGIN
-    INSERT INTO cosmos.transactions_0 VALUES (NEW.*) ON CONFLICT DO NOTHING;
-    RETURN NULL;
-END;
-$$
-    LANGUAGE plpgsql;
-
-CREATE TRIGGER insert_transactions_trigger
-    BEFORE INSERT
-    ON cosmos.transactions
-    FOR EACH ROW
-EXECUTE FUNCTION transactions_insert_trigger();
+--
+-- CREATE TABLE IF NOT EXISTS cosmos.transactions_0
+-- (
+--     UNIQUE (block_hash, tx_hash),
+--     CHECK (block_height BETWEEN 0 AND 50000 )
+-- ) INHERITS (cosmos.transactions);
+--
+-- CREATE INDEX transactions_0_block_height_idx ON cosmos.transactions_0 (block_height);
+-- CREATE INDEX transactions_0_chain_id_idx ON cosmos.transactions_0 (chain_id);
+-- CREATE INDEX transactions_0_status_idx ON cosmos.transactions_0 (status);
+--
+-- CREATE INDEX transactions_0_events_params_idx ON cosmos.transactions_0 USING GIN ((events -> 'Params') jsonb_path_ops);
+-- CREATE INDEX transactions_0_msgs_idx ON cosmos.transactions_0 USING GIN (msgs jsonb_path_ops);
+--
+-- CREATE OR REPLACE FUNCTION transactions_insert_trigger()
+--     RETURNS TRIGGER AS
+-- $$
+-- BEGIN
+--     INSERT INTO cosmos.transactions_0 VALUES (NEW.*) ON CONFLICT DO NOTHING;
+--     RETURN NULL;
+-- END;
+-- $$
+--     LANGUAGE plpgsql;
+--
+-- CREATE TRIGGER insert_transactions_trigger
+--     BEFORE INSERT
+--     ON cosmos.transactions
+--     FOR EACH ROW
+-- EXECUTE FUNCTION transactions_insert_trigger();
 
 
 
