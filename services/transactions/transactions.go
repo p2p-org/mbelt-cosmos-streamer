@@ -3,29 +3,16 @@ package transactions
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	"net/http"
-	"strconv"
-
-	"github.com/p2p-org/mbelt-cosmos-streamer/datastore/pg"
-	"github.com/p2p-org/mbelt-cosmos-streamer/datastore/utils"
-	"github.com/prometheus/common/log"
-	ctypes "github.com/tendermint/tendermint/rpc/core/types"
 
 	cosmosTypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	"github.com/cosmos/gaia/app"
+	"github.com/p2p-org/mbelt-cosmos-streamer/client"
 	"github.com/p2p-org/mbelt-cosmos-streamer/config"
 	"github.com/p2p-org/mbelt-cosmos-streamer/datastore"
+	"github.com/p2p-org/mbelt-cosmos-streamer/datastore/pg"
+	"github.com/p2p-org/mbelt-cosmos-streamer/datastore/utils"
+	"github.com/prometheus/common/log"
 	"github.com/tendermint/tendermint/types"
-)
-
-type StatusEnum string
-
-const (
-	PendingStatus   StatusEnum = "pending"
-	ConfirmedStatus StatusEnum = "confirmed"
-	RejectedStatus  StatusEnum = "rejected"
-	OnForkStatus    StatusEnum = "onfork"
 )
 
 type TempMessage struct {
@@ -54,22 +41,19 @@ func Init(config *config.Config, ds *datastore.KafkaDatastore, pgDs *pg.PgDatast
 	}, nil
 }
 
-func (s *Service) Push(tx *types.EventDataTx) {
-	// Empty messages has panic
+func (s *Service) Push(block *types.Block, tx *types.EventDataTx) {
 	defer func() {
 		if r := recover(); r != nil {
 			log.Fatalln("[TransactionsService][Recover]", "Throw panic", r)
 		}
 	}()
-	lcdURL := s.config.Node.Host + ":" + strconv.Itoa(s.config.Node.LCDPort)
-	block := getBlock(lcdURL, tx.Height)
 	m := map[string]interface{}{}
 	m[fmt.Sprintf("%X", tx.Tx.Hash())] = s.serialize(block, tx)
 
 	s.ds.Push(datastore.TopicTransactions, m)
 }
 
-func (s *Service) serialize(block ctypes.ResultBlock, tx *types.EventDataTx) map[string]interface{} {
+func (s *Service) serialize(block *types.Block, tx *types.EventDataTx) map[string]interface{} {
 	var txResult cosmosTypes.StdTx
 	err := cdc.UnmarshalBinaryLengthPrefixed([]byte(tx.Tx), &txResult)
 
@@ -88,7 +72,6 @@ func (s *Service) serialize(block ctypes.ResultBlock, tx *types.EventDataTx) map
 		Log      string      `json:"log"`
 		Events   interface{} `json:"events"`
 	}
-	err = json.Unmarshal([]byte(tx.Result.Log), &logs)
 	var messages []map[string]interface{}
 	var good bool = true
 	err = json.Unmarshal([]byte(tx.Result.Log), &logs)
@@ -132,10 +115,10 @@ func (s *Service) serialize(block ctypes.ResultBlock, tx *types.EventDataTx) map
 
 	result := map[string]interface{}{
 		"tx_hash":      fmt.Sprintf("%X", tx.Tx.Hash()),
-		"chain_id":     block.Block.ChainID,
-		"block_height": block.Block.Height,
-		"block_hash":   block.Block.Hash().String(),
-		"time":         block.Block.Time.Unix(),
+		"chain_id":     block.ChainID,
+		"block_height": block.Height,
+		"block_hash":   block.Hash().String(),
+		"time":         block.Time.Unix(),
 		"tx_index":     tx.Index,
 		"logs":         logs,
 		"events":       utils.ToVarcharArray([]string{}),
@@ -147,32 +130,13 @@ func (s *Service) serialize(block ctypes.ResultBlock, tx *types.EventDataTx) map
 		},
 		"signatures":    string(signatures),
 		"memo":          txResult.GetMemo(),
-		"status":        PendingStatus,
+		"status":        client.PendingStatus,
 		"external_info": utils.ToVarcharArray([]string{}),
 	}
 
 	if good && len(logs) == len(messages) {
-		result["status"] = ConfirmedStatus
+		result["status"] = client.ConfirmedStatus
 	}
 
 	return result
-}
-
-func getBlock(lcdURL string, blockHeight int64) ctypes.ResultBlock {
-	url := "http://" + lcdURL + "/blocks/" + strconv.FormatInt(blockHeight, 10)
-	resp, err := http.Get(url)
-	if err != nil {
-		log.Errorf("ResendBlock got responce error: %v", err)
-	}
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		log.Errorf("ResendBlock problem in decode responce to byte array. error: %v", err)
-	}
-	var block ctypes.ResultBlock
-	err = cdc.UnmarshalJSON(body, &block)
-	if err != nil {
-		log.Errorf("ResendBlock problem in unmarshal to resultBlock. error: %v", err)
-	}
-
-	return block
 }

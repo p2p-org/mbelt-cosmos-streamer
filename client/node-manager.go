@@ -9,8 +9,6 @@ import (
 	"strconv"
 	"time"
 
-	// clientTx "github.com/cosmos/cosmos-sdk/client/tx"
-	// cosmosTypes "github.com/cosmos/cosmos-sdk/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	cosmosTypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	"github.com/cosmos/gaia/app"
@@ -23,8 +21,20 @@ import (
 
 var cdc = app.MakeCodec()
 
+type Api interface {
+	Init(cfg *config.Config) error
+	Connect() error
+	SubscribeBlock(ctx context.Context) <-chan ctypes.ResultEvent
+	SubscribeTxs(ctx context.Context) <-chan ctypes.ResultEvent
+	GetBlock(height int64) *types.Block
+	// GetTx(hash string) *types.EventDataTx
+	Stop()
+	ResendBlock(blockHeight uint64)
+	ResendTx(txHash string, index uint32)
+}
+
 // NodeConnector info
-type NodeManager struct {
+type ClientApi struct {
 	BlockChan chan Block
 	TxChan    chan TransactionWithBlockInfo
 	wsURL     string
@@ -33,22 +43,15 @@ type NodeManager struct {
 	wsClient  *client.HTTP
 }
 
-func InitNodeManager(cfg *config.Config) (*NodeManager, error) {
-	wsURL := "http://" + cfg.Node.Host + ":" + strconv.Itoa(cfg.Node.WebSocketPort)
-	rpcURL := cfg.Node.Host + ":" + strconv.Itoa(cfg.Node.RPCPort)
-	lcdURL := cfg.Node.Host + ":" + strconv.Itoa(cfg.Node.LCDPort)
+func (nm *ClientApi) Init(cfg *config.Config) error {
+	nm.wsURL = "http://" + cfg.Node.Host + ":" + strconv.Itoa(cfg.Node.WebSocketPort)
+	nm.rpcURL = cfg.Node.Host + ":" + strconv.Itoa(cfg.Node.RPCPort)
+	nm.lcdURL = cfg.Node.Host + ":" + strconv.Itoa(cfg.Node.LCDPort)
 
-	return &NodeManager{
-		wsURL:  wsURL,
-		rpcURL: rpcURL,
-		lcdURL: lcdURL,
-
-		BlockChan: make(chan Block, 1000),
-		TxChan:    make(chan TransactionWithBlockInfo, 10000),
-	}, nil
+	return nil
 }
 
-func (nm *NodeManager) Connect() error {
+func (nm *ClientApi) Connect() error {
 	nm.wsClient = client.NewHTTP(nm.wsURL, "/websocket")
 	for {
 		err := nm.wsClient.Start()
@@ -64,23 +67,18 @@ func (nm *NodeManager) Connect() error {
 	return nil
 }
 
-func (nm *NodeManager) SubscribeBlock(processingBlock func(*types.EventDataNewBlock)) {
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+func (nm *ClientApi) SubscribeBlock(ctx context.Context) <-chan ctypes.ResultEvent {
+	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
 	defer cancel()
 	blocks, err := nm.wsClient.Subscribe(ctx, "test-client", blockQuery)
 	if err != nil {
 		log.Errorln(err)
 		// return err
 	}
-	for block := range blocks {
-		log.Infoln("Height:", block.Data.(types.EventDataNewBlock).Block.Header.Height)
-		newBlock := block.Data.(types.EventDataNewBlock)
-		go processingBlock(&newBlock)
-	}
-
+	return blocks
 }
 
-func (nm *NodeManager) SubscribeTxs(processingTx func(tx *types.EventDataTx)) {
+func (nm *ClientApi) SubscribeTxs(ctx context.Context) <-chan ctypes.ResultEvent {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
 	txs, err := nm.wsClient.Subscribe(ctx, "test-client", txQuery)
@@ -88,19 +86,33 @@ func (nm *NodeManager) SubscribeTxs(processingTx func(tx *types.EventDataTx)) {
 		log.Errorln(err)
 		// return err
 	}
-	for tx := range txs {
-		log.Infoln("tx new -> ", fmt.Sprintf("%X %d", tx.Data.(types.EventDataTx).Tx.Hash(), tx.Data.(types.EventDataTx).Height))
-		newTx := tx.Data.(types.EventDataTx)
-		go processingTx(&newTx)
-	}
+	return txs
 
 }
 
-func (nm *NodeManager) Stop() {
+func (nm *ClientApi) Stop() {
 	nm.wsClient.Stop()
 }
 
-func (nm *NodeManager) ResendBlock(blockHeight uint64) {
+func (nm *ClientApi) GetBlock(height int64) *types.Block {
+	url := "http://" + nm.lcdURL + "/blocks/" + strconv.FormatInt(height, 10)
+	resp, err := http.Get(url)
+	if err != nil {
+		log.Errorf("ResendBlock got responce error: %v", err)
+	}
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Errorf("ResendBlock problem in decode responce to byte array. error: %v", err)
+	}
+	var block ctypes.ResultBlock
+	err = cdc.UnmarshalJSON(body, &block)
+	if err != nil {
+		log.Errorf("ResendBlock problem in unmarshal to resultBlock. error: %v", err)
+	}
+	return block.Block
+}
+
+func (nm *ClientApi) ResendBlock(blockHeight uint64) {
 	url := "http://" + nm.lcdURL + "/blocks/" + strconv.FormatUint(blockHeight, 10)
 	resp, err := http.Get(url)
 	if err != nil {
@@ -123,7 +135,7 @@ func (nm *NodeManager) ResendBlock(blockHeight uint64) {
 		NumTxs:        uint64(block.Block.Header.NumTxs),
 		TotalTxs:      uint64(block.Block.Header.TotalTxs),
 		LastBlockHash: fmt.Sprintf("%X", block.Block.Header.LastBlockID.Hash),
-		Validators:    fmt.Sprintf("%X", block.Block.Header.ValidatorsHash),
+		Validator:     fmt.Sprintf("%X", block.Block.Header.ValidatorsHash),
 		Status:        PendingStatus,
 	}
 	for i, temp_tx := range block.Block.Data.Txs {
@@ -132,14 +144,14 @@ func (nm *NodeManager) ResendBlock(blockHeight uint64) {
 		if err != nil {
 			log.Errorf("error parse Tx err: %v,  Txresult: %v", err, txResult)
 		}
-		fee, err := cdc.MarshalJSON(txResult.Fee)
-		if err != nil {
-			log.Errorf("error on marshal fee to json err %v data %v", err, txResult.Fee)
-		}
-		signatures, err := cdc.MarshalJSON(txResult.Signatures)
-		if err != nil {
-			log.Errorf("error on marshal signature to json err %v data %v", err, txResult.Fee)
-		}
+		// fee, err := cdc.MarshalJSON(txResult.Fee)
+		// if err != nil {
+		// 	log.Errorf("error on marshal fee to json err %v data %v", err, txResult.Fee)
+		// }
+		// signatures, err := cdc.MarshalJSON(txResult.Signatures)
+		// if err != nil {
+		// 	log.Errorf("error on marshal signature to json err %v data %v", err, txResult.Fee)
+		// }
 		messages := make([]Message, 0)
 
 		for _, msg := range txResult.GetMsgs() {
@@ -166,21 +178,21 @@ func (nm *NodeManager) ResendBlock(blockHeight uint64) {
 			}
 			messages = append(messages, resultMessage)
 		}
-		blockToProduce.Txs = append(blockToProduce.Txs, BlockTransaction{
-			TxHash:     fmt.Sprintf("%X", temp_tx.Hash()),
-			Messages:   messages,
-			Fee:        string(fee),
-			Signatures: string(signatures),
-			Memo:       txResult.GetMemo(),
-			Status:     PendingStatus,
-		})
+		// blockToProduce.Txs = append(blockToProduce.Txs, BlockTransaction{
+		// 	TxHash:     fmt.Sprintf("%X", temp_tx.Hash()),
+		// 	Messages:   messages,
+		// 	Fee:        string(fee),
+		// 	Signatures: string(signatures),
+		// 	Memo:       txResult.GetMemo(),
+		// 	Status:     PendingStatus,
+		// })
 		go nm.ResendTx(fmt.Sprintf("%X", temp_tx.Hash()), uint32(i))
 	}
 
 	nm.BlockChan <- blockToProduce
 }
 
-func (nm *NodeManager) ResendTx(txHash string, index uint32) {
+func (nm *ClientApi) ResendTx(txHash string, index uint32) {
 	url := "http://" + nm.lcdURL + "/txs/" + txHash
 	resp, err := http.Get(url)
 	if err != nil {

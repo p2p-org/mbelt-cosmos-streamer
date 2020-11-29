@@ -2,37 +2,39 @@ package worker
 
 import (
 	"context"
-	"github.com/p2p-org/mbelt-cosmos-streamer/config"
-	"github.com/p2p-org/mbelt-cosmos-streamer/services"
-	"log"
+	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
+
+	"github.com/p2p-org/mbelt-cosmos-streamer/cache"
+	"github.com/p2p-org/mbelt-cosmos-streamer/client"
+	"github.com/p2p-org/mbelt-cosmos-streamer/config"
+	"github.com/p2p-org/mbelt-cosmos-streamer/services"
+	"github.com/prometheus/common/log"
+	"github.com/tendermint/tendermint/types"
 )
 
-const (
-	defaultHeight = 5000
-	batchCapacity = 20
-
-	// current event is current head. We receive it once right after subscription on head updates
-	HeadEventCurrent = "current"
-	HeadEventApply   = "apply"
-	HeadEventRevert  = "revert"
-)
-
-func Start(conf *config.Config, sync bool, syncForce bool, updHead bool, syncFrom int, syncFromDbOffset int) {
+func Start(config *config.Config, sync bool, syncForce bool, updHead bool, syncFrom int, syncFromDbOffset int) {
 	exitCode := 0
 	defer os.Exit(exitCode)
 
-	err := services.InitServices(conf)
+	err := services.InitServices(config)
 	if err != nil {
-		log.Println("[App][Debug]", "Cannot init services:", err)
+		log.Infoln("[App][Debug]", "Cannot init services:", err)
 		exitCode = 1
 		return
 	}
+	api := &cache.CacheApi{Api: &client.ClientApi{}}
+	if err := api.Init(config); err != nil {
+		log.Fatalln(err)
+	}
 
-	// syncCtx, syncCancel := context.WithCancel(context.Background())
-	// updCtx, updCancel := context.WithCancel(context.Background())
+	if err = api.Connect(); err != nil {
+		log.Fatalln(err)
+	}
+	syncCtx, syncCancel := context.WithCancel(context.Background())
+
 	go func() {
 		var gracefulStop = make(chan os.Signal)
 		signal.Notify(gracefulStop, syscall.SIGTERM)
@@ -40,191 +42,31 @@ func Start(conf *config.Config, sync bool, syncForce bool, updHead bool, syncFro
 		signal.Notify(gracefulStop, syscall.SIGHUP)
 
 		sig := <-gracefulStop
-		log.Printf("Caught sig: %+v", sig)
-		log.Println("Wait for graceful shutdown to finish.")
-		// syncCancel()
-		// updCancel()
+		log.Infof("Caught sig: %+v", sig)
+		log.Infoln("Wait for graceful shutdown to finish.")
+
+		syncCancel()
+		api.Stop()
 	}()
 
-	// if syncForce {
-	// 	syncToHead(0, syncCtx)
-	// }
+	go func() {
+		for block := range api.SubscribeBlock(syncCtx) {
+			log.Infoln("Height:", block.Data.(types.EventDataNewBlock).Block.Header.Height)
+			newBlock := block.Data.(types.EventDataNewBlock)
 
-	// if sync {
-	// 	if syncFrom >= 0 {
-	// 		syncToHead(syncFrom, syncCtx)
-	// 	} else {
-	// 		heightFromDb, err := services.App().BlocksService().GetMaxHeightFromDB()
-	// 		if err != nil {
-	// 			log.Println("Can't get max height from postgres DB, stopping...")
-	// 			log.Println(err)
-	// 			exitCode = 1
-	// 			return
-	// 		}
-	//
-	// 		if heightFromDb < syncFromDbOffset {
-	// 			syncToHead(0, syncCtx)
-	// 		} else {
-	// 			syncToHead(heightFromDb-syncFromDbOffset, syncCtx)
-	// 		}
-	// 	}
-	// }
-
-	// if updHead {
-	// 	updateHeads(updCtx)
-	// }
-	stop := make(chan struct{})
-	<-stop
-	log.Println("mbelt-cosmos-streamer gracefully stopped")
-}
-
-func updateHeads(ctx context.Context) {
-	// headUpdatesCtx, cancelHeadUpdates := context.WithCancel(ctx)
-	// Buffer is that big for channel to be able to store some head updates while we are syncing till "current" block
-	// TODO: This approach is not solid. Think how we can do it better.
-	// headUpdates := make(chan []*api.HeadChange, 1000)
-	// services.App().BlocksService().GetHeadUpdates(headUpdatesCtx, &headUpdates)
-
-	for {
-		select {
-		// case update := <-headUpdates:
-		// 	for _, hu := range update {
-		// 		switch hu.Type {
-		//
-		// 		case HeadEventCurrent:
-		// 			currentHeight := int(hu.Val.Height())
-		// 			maxHeightInDb, err := services.App().BlocksService().GetMaxHeightFromDB()
-		// 			if err != nil {
-		// 				log.Println("[App][Error][updateHeads]", "couldn't get max height from DB. Error:", err)
-		// 				cancelHeadUpdates()
-		// 				return
-		// 			}
-		// 			if currentHeight > maxHeightInDb {
-		// 				syncTo(maxHeightInDb, currentHeight, ctx)
-		// 			}
-		// 			// Pushing block and its messages to kafka just in case.
-		// 			// TODO: Duplicates should be handled on db's side
-		// 			pushTipsetWithBlocksAndMessages(hu.Val)
-		//
-		// 		case HeadEventRevert:
-		// 			services.App().TipSetsService().PushTipSetsToRevert(hu.Val)
-		//
-		// 		case HeadEventApply:
-		// 			pushTipsetWithBlocksAndMessages(hu.Val)
-		//
-		// 		default:
-		// 			log.Println("[App][Debug][updateHeads]", "yet unknown event encountered:", hu.Type)
-		// 			// Pushing just in case
-		// 			pushTipsetWithBlocksAndMessages(hu.Val)
-		// 		}
-		// 	}
-		case <-ctx.Done():
-			// cancelHeadUpdates()
-			log.Println("[App][Debug][updateHeads]", "unsubscribed from head updates")
-			return
+			go services.App().BlocksService().Push(&newBlock)
 		}
-	}
-}
+	}()
 
-// func syncToHead(from int, ctx context.Context) {
-// 	head := services.App().TipSetsService().GetHead()
-// 	if head != nil {
-// 		syncTo(from, int(head.Height()), ctx)
-// 	} else {
-// 		syncTo(from, 0, ctx)
-// 	}
-// }
-//
-// func syncTo(from int, to int, ctx context.Context) {
-// 	syncHeight := abi.ChainEpoch(to)
-// 	if to <= from {
-// 		log.Println("[App][Debug][sync]", "Specified sync height is too small, syncing to default height:", defaultHeight)
-// 		syncHeight = defaultHeight
-// 	}
-//
-// 	defer log.Println("[App][Debug][sync]", "finished sync")
-// 	startHeight := abi.ChainEpoch(from)
-// 	if startHeight <= 1 {
-// 		log.Println("getting genesis")
-// 		genesis := services.App().TipSetsService().GetGenesis()
-// 		log.Println(genesis.MarshalJSON())
-// 		services.App().TipSetsService().Push(genesis)
-// 		services.App().BlocksService().Push(genesis.Blocks())
-// 		services.App().MessagesService().Push(getBlockMessages(genesis.Blocks()))
-// 	}
-//
-// 	for height := startHeight; height < syncHeight; {
-// 		select {
-// 		default:
-// 			wg := sync.WaitGroup{}
-// 			wg.Add(batchCapacity)
-//
-// 			for workers := 0; workers < batchCapacity; workers++ {
-//
-// 				go func(height abi.ChainEpoch) {
-// 					defer wg.Done()
-// 					_, tipSet, blocks, msgs := syncForHeight(height)
-// 					services.App().TipSetsService().Push(tipSet)
-// 					services.App().BlocksService().Push(blocks)
-// 					services.App().MessagesService().Push(msgs)
-//
-// 				}(height)
-//
-// 				height++
-// 			}
-//
-// 			wg.Wait()
-// 		case <-ctx.Done():
-// 			return
-// 		}
-// 	}
-// }
-//
-// func syncForHeight(height abi.ChainEpoch) (isHeightNotReached bool, tipSet *types.TipSet, blocks []*types.BlockHeader, extMessages []*messages.MessageExtended) {
-// 	log.Println("[Datastore][Debug]", "Load height:", height)
-//
-// 	tipSet, isHeightNotReached = services.App().TipSetsService().GetByHeight(height)
-//
-// 	if !isHeightNotReached {
-// 		log.Println("[App][Debug]", "Height reached")
-// 		return
-// 	}
-//
-// 	// Empty TipSet, skipping
-// 	if tipSet == nil {
-// 		return
-// 	}
-//
-// 	blocks = tipSet.Blocks()
-// 	extMessages = getBlockMessages(blocks)
-//
-// 	return
-// }
-//
-// func getBlockMessages(blocks []*types.BlockHeader) (msgs []*messages.MessageExtended) {
-// 	for _, block := range blocks {
-// 		blockMessages := services.App().MessagesService().GetBlockMessages(block.Cid())
-//
-// 		if blockMessages == nil || len(blockMessages.BlsMessages) == 0 {
-// 			continue
-// 		}
-//
-// 		for _, blsMessage := range blockMessages.BlsMessages {
-// 			msgs = append(msgs, &messages.MessageExtended{
-// 				BlockCid:  block.Cid(),
-// 				Message:   blsMessage,
-// 				Timestamp: block.Timestamp,
-// 			})
-// 		}
-//
-// 	}
-//
-// 	return msgs
-// }
-//
-// func pushTipsetWithBlocksAndMessages(tipset *types.TipSet) {
-// 	services.App().TipSetsService().Push(tipset)
-// 	msgs := getBlockMessages(tipset.Blocks())
-// 	services.App().BlocksService().Push(tipset.Blocks())
-// 	services.App().MessagesService().Push(msgs)
-// }
+	go func() {
+		for tx := range api.SubscribeTxs(syncCtx) {
+			log.Infoln("tx new -> ", fmt.Sprintf("%X %d", tx.Data.(types.EventDataTx).Tx.Hash(), tx.Data.(types.EventDataTx).Height))
+			newTx := tx.Data.(types.EventDataTx)
+			block := api.GetBlock(newTx.Height)
+			go services.App().TransactionsService().Push(block, &newTx)
+		}
+	}()
+
+	<-syncCtx.Done()
+	log.Infoln("mbelt-cosmos-streamer gracefully stopped")
+}

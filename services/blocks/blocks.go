@@ -3,6 +3,7 @@ package blocks
 import (
 	"fmt"
 
+	"github.com/p2p-org/mbelt-cosmos-streamer/client"
 	"github.com/p2p-org/mbelt-cosmos-streamer/datastore/utils"
 	"github.com/prometheus/common/log"
 
@@ -10,15 +11,6 @@ import (
 	"github.com/p2p-org/mbelt-cosmos-streamer/datastore"
 	"github.com/p2p-org/mbelt-cosmos-streamer/datastore/pg"
 	"github.com/tendermint/tendermint/types"
-)
-
-type StatusEnum string
-
-const (
-	PendingStatus   StatusEnum = "pending"
-	ConfirmedStatus StatusEnum = "confirmed"
-	RejectedStatus  StatusEnum = "rejected"
-	OnForkStatus    StatusEnum = "onfork"
 )
 
 type Service struct {
@@ -63,6 +55,6 @@ func (s *Service) serialize(block *types.EventDataNewBlock) map[string]interface
 		"total_txs":       uint64(block.Block.Header.TotalTxs),
 		"last_block_hash": block.Block.Header.LastBlockID.Hash.String(),
 		"validator":       block.Block.Header.ValidatorsHash.String(),
-		"status":          PendingStatus,
+		"status":          client.PendingStatus,
 	}
 }

@@ -34,16 +34,16 @@ type TransactionConnector struct {
 
 // Block info
 type Block struct {
-	Hash          string             `json:"hash"`
-	ChainID       string             `json:"chainID"`
-	Height        uint64             `json:"height"`
-	Time          time.Time          `json:"time"`
-	NumTxs        uint64             `json:"numTx"`
-	TotalTxs      uint64             `json:"totalTxs"`
-	LastBlockHash string             `json:"lastBlockHash"`
-	Validators    string             `json:"validators"`
-	Status        StatusEnum         `json:"status"`
-	Txs           []BlockTransaction `json:"txs"`
+	Hash          string     `json:"hash"`
+	ChainID       string     `json:"chain_id"`
+	Height        uint64     `json:"height"`
+	Time          time.Time  `json:"time"`
+	NumTxs        uint64     `json:"num_tx"`
+	TxsHash       string     `json:"txs_hash"`
+	TotalTxs      uint64     `json:"total_txs"`
+	LastBlockHash string     `json:"last_block_hash"`
+	Validator     string     `json:"validator"`
+	Status        StatusEnum `json:"status"`
 }
 
 type TransactionWithBlockInfo struct {

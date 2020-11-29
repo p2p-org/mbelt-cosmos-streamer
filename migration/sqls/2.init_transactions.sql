@@ -64,6 +64,30 @@ CREATE TABLE IF NOT EXISTS cosmos._transactions
 -- EXECUTE FUNCTION transactions_insert_trigger();
 
 
+CREATE OR REPLACE FUNCTION cosmos.block_status_change()
+    RETURNS trigger AS
+$$
+BEGIN
+
+    UPDATE cosmos.blocks
+    SET status = 'confirmed'::status_enum
+    where hash = NEW.block_hash
+      AND num_tx = (
+        select count(*) from cosmos.transactions where block_hash = NEW.block_hash
+    )
+      AND cosmos.blocks.chain_id = NEW.chain_id;
+    RETURN NEW;
+END ;
+
+$$
+    LANGUAGE 'plpgsql';
+
+CREATE TRIGGER trg_block_status_change
+    AFTER INSERT
+    ON cosmos.transactions
+    FOR EACH ROW
+EXECUTE PROCEDURE cosmos.block_status_change();
+
 
 CREATE OR REPLACE FUNCTION cosmos.sink_transactions_insert()
     RETURNS trigger AS
