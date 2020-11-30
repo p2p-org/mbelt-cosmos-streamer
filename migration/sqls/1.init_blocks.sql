@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS cosmos.blocks
     "total_txs"       bigint,
     "last_block_hash" varchar(64),
     "validator"       varchar(64),
-    "txs_hash"        varchar(128)[],
+    "txs_hash"        varchar(64)[],
     "status"          status_enum,
     unique (hash, height)
 );

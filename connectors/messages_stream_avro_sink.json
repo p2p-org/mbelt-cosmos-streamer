@@ -10,8 +10,8 @@
     "insert.mode": "INSERT",
     "table.name.format": "cosmos._messages",
     "errors.tolerance": "all",
-    "pk.mode": "record_value",
-    "pk.fields": "id",
+    "pk.mode": "none",
+    "pk.fields": "",
     "auto.create": "false",
     "auto.evolve": "false",
     "value.converter.schema.registry.url": "http://schema-registry:8081"

@@ -47,10 +47,21 @@ func (s *Service) Push(block *types.Block, tx *types.EventDataTx) {
 			log.Fatalln("[TransactionsService][Recover]", "Throw panic", r)
 		}
 	}()
-	m := map[string]interface{}{}
-	m[fmt.Sprintf("%X", tx.Tx.Hash())] = s.serialize(block, tx)
+	txPush := map[string]interface{}{}
+	txResult := s.serialize(block, tx)
+	msgs := txResult["messages_for_push"]
+	delete(txResult, "messages_for_push")
+	txPush[fmt.Sprintf("%X", tx.Tx.Hash())] = txResult
 
-	s.ds.Push(datastore.TopicTransactions, m)
+	msgsPush := map[string]interface{}{}
+
+	for _, msg := range msgs.([]map[string]interface{}) {
+		key := fmt.Sprintf("%d-%d", msg["tx_index"], msg["msg_index"])
+		msgsPush[key] = msg
+	}
+
+	s.ds.Push(datastore.TopicTransactions, txPush)
+	s.ds.Push(datastore.TopicMessages, msgsPush)
 }
 
 func (s *Service) serialize(block *types.Block, tx *types.EventDataTx) map[string]interface{} {
@@ -73,6 +84,7 @@ func (s *Service) serialize(block *types.Block, tx *types.EventDataTx) map[strin
 		Events   interface{} `json:"events"`
 	}
 	var messages []map[string]interface{}
+	var messagesForPush []map[string]interface{}
 	var good bool = true
 	err = json.Unmarshal([]byte(tx.Result.Log), &logs)
 	if err != nil {
@@ -103,11 +115,23 @@ func (s *Service) serialize(block *types.Block, tx *types.EventDataTx) map[strin
 			}
 
 			message := map[string]interface{}{
-				"type":   "",
+				"type":   tempMessage.MsgType,
 				"value":  string(msgValue),
 				"events": string(events),
 				"log":    log_info.Log,
 			}
+			messageForPush := map[string]interface{}{
+				"block_hash":    block.Hash().String(),
+				"tx_hash":       fmt.Sprintf("%X", tx.Tx.Hash()),
+				"tx_index":      tx.Index,
+				"msg_index":     log_info.MsgIndex,
+				"msg_type":      tempMessage.MsgType,
+				"msg_info":      tempMessage.Msg,
+				"logs":          log_info.Log,
+				"events":        string(events),
+				"external_info": utils.ToVarcharArray([]string{}),
+			}
+			messagesForPush = append(messagesForPush, messageForPush)
 			messages = append(messages, message)
 		}
 
@@ -128,10 +152,11 @@ func (s *Service) serialize(block *types.Block, tx *types.EventDataTx) map[strin
 			"gas_used":   fmt.Sprintf("%d", tx.Result.GasUsed),
 			"gas_amount": txResult.Fee.Amount.String(),
 		},
-		"signatures":    string(signatures),
-		"memo":          txResult.GetMemo(),
-		"status":        client.PendingStatus,
-		"external_info": utils.ToVarcharArray([]string{}),
+		"signatures":        string(signatures),
+		"memo":              txResult.GetMemo(),
+		"status":            client.PendingStatus,
+		"external_info":     utils.ToVarcharArray([]string{}),
+		"messages_for_push": messagesForPush,
 	}
 
 	if good && len(logs) == len(messages) {

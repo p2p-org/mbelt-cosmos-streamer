@@ -68,7 +68,6 @@ CREATE OR REPLACE FUNCTION cosmos.block_status_change()
     RETURNS trigger AS
 $$
 BEGIN
-
     UPDATE cosmos.blocks
     SET status = 'confirmed'::status_enum
     where hash = NEW.block_hash

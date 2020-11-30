@@ -3,12 +3,12 @@ package cache
 import (
 	"context"
 	"fmt"
-	"log"
 	"sync"
 
 	"github.com/gomodule/redigo/redis"
 	"github.com/p2p-org/mbelt-cosmos-streamer/client"
 	"github.com/p2p-org/mbelt-cosmos-streamer/config"
+	"github.com/prometheus/common/log"
 	ctypes "github.com/tendermint/tendermint/rpc/core/types"
 	"github.com/tendermint/tendermint/types"
 )
@@ -29,7 +29,7 @@ func (c *CacheApi) SubscribeBlock(ctx context.Context) chan ctypes.ResultEvent {
 	go func() {
 		for block := range c.Api.SubscribeBlock(ctx) {
 			newBlock := block.Data.(types.EventDataNewBlock)
-			log.Println("cache blocks -> ", block.Data.(types.EventDataNewBlock).Block.Height)
+			log.Infoln("cache blocks -> ", block.Data.(types.EventDataNewBlock).Block.Height)
 			cache.StoreBlock(newBlock.Block.Height, newBlock)
 			blocks <- block
 		}
@@ -42,8 +42,7 @@ func (c *CacheApi) SubscribeTxs(ctx context.Context) chan ctypes.ResultEvent {
 	go func() {
 		for tx := range c.Api.SubscribeTxs(ctx) {
 			newTx := tx.Data.(types.EventDataTx)
-			log.Println("cache tx -> ", fmt.Sprintf("%X", newTx.Tx.Hash()))
-			// cache.StoreBlock(newBlock.Block.Height, newBlock)
+			log.Infoln("cache tx -> ", fmt.Sprintf("%X", newTx.Tx.Hash()))
 			txs <- tx
 		}
 	}()
@@ -52,8 +51,11 @@ func (c *CacheApi) SubscribeTxs(ctx context.Context) chan ctypes.ResultEvent {
 
 func (c *CacheApi) GetBlock(height int64) *types.Block {
 	if block, ok := cache.blocksSync.Load(height); ok {
+		log.Infoln("get block from cache -> ", height)
 		return block.(types.EventDataNewBlock).Block
 	}
+	log.Infoln("get block from http ->", height)
+	// TODO save block to cache
 	return c.Api.GetBlock(height)
 }
 
@@ -142,7 +144,3 @@ func (cm *CacheManager) StoreBlock(height int64, block types.EventDataNewBlock) 
 // func (cm *CacheManager) Close() {
 // 	cm.conn.Close()
 // }
-//
-//
-//
-//

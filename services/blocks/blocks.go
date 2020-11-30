@@ -45,7 +45,7 @@ func (s *Service) serialize(block *types.EventDataNewBlock) map[string]interface
 		txsHash = append(txsHash, fmt.Sprintf("%X", tx.Hash()))
 	}
 
-	return map[string]interface{}{
+	result := map[string]interface{}{
 		"hash":            block.Block.Hash().String(),
 		"chain_id":        block.Block.Header.ChainID,
 		"height":          uint64(block.Block.Header.Height),
@@ -57,4 +57,10 @@ func (s *Service) serialize(block *types.EventDataNewBlock) map[string]interface
 		"validator":       block.Block.Header.ValidatorsHash.String(),
 		"status":          client.PendingStatus,
 	}
+
+	if uint64(block.Block.Header.NumTxs) == 0 {
+		result["status"] = client.ConfirmedStatus
+	}
+
+	return result
 }

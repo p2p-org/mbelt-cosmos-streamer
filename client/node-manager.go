@@ -27,7 +27,7 @@ type Api interface {
 	SubscribeBlock(ctx context.Context) <-chan ctypes.ResultEvent
 	SubscribeTxs(ctx context.Context) <-chan ctypes.ResultEvent
 	GetBlock(height int64) *types.Block
-	// GetTx(hash string) *types.EventDataTx
+	GetTx(txHash string) *cosmosTypes.StdTx
 	Stop()
 	ResendBlock(blockHeight uint64)
 	ResendTx(txHash string, index uint32)
@@ -59,7 +59,6 @@ func (nm *ClientApi) Connect() error {
 			log.Errorln(nm.wsURL, "err:", err)
 			time.Sleep(time.Second)
 			continue
-			// return err
 		}
 		break
 
@@ -73,7 +72,6 @@ func (nm *ClientApi) SubscribeBlock(ctx context.Context) <-chan ctypes.ResultEve
 	blocks, err := nm.wsClient.Subscribe(ctx, "test-client", blockQuery)
 	if err != nil {
 		log.Errorln(err)
-		// return err
 	}
 	return blocks
 }
@@ -84,7 +82,6 @@ func (nm *ClientApi) SubscribeTxs(ctx context.Context) <-chan ctypes.ResultEvent
 	txs, err := nm.wsClient.Subscribe(ctx, "test-client", txQuery)
 	if err != nil {
 		log.Errorln(err)
-		// return err
 	}
 	return txs
 
@@ -110,6 +107,25 @@ func (nm *ClientApi) GetBlock(height int64) *types.Block {
 		log.Errorf("ResendBlock problem in unmarshal to resultBlock. error: %v", err)
 	}
 	return block.Block
+}
+
+func (nm *ClientApi) GetTx(txHash string) *cosmosTypes.StdTx {
+	url := "http://" + nm.lcdURL + "/txs/" + txHash
+	resp, err := http.Get(url)
+	if err != nil {
+		log.Errorf("Error: %v", err)
+	}
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Errorf("Error: %v", err)
+	}
+	var tx sdk.TxResponse
+	err = cdc.UnmarshalJSON(body, &tx)
+	if err != nil {
+		log.Errorf("error on unmarshal txResult from json err %v data %v\n", err, body)
+	}
+	newTx := tx.Tx.(cosmosTypes.StdTx)
+	return &newTx
 }
 
 func (nm *ClientApi) ResendBlock(blockHeight uint64) {
