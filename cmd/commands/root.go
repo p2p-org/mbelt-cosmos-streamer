@@ -28,7 +28,16 @@ var (
 Entities (tipsets, blocks and messages) are being pushed to Kafka. There are also sinks that get
 those entities from Kafka streams and push them in PostgreSQL DB.'`,
 		Run: func(cmd *cobra.Command, args []string) {
-			worker.Start(&conf, sync, syncForce, updHead, syncFrom, syncFromDbOffset)
+			worker.StartStreamer(&conf, sync, syncForce, updHead, syncFrom, syncFromDbOffset)
+		},
+	}
+
+	watcherCmd = &cobra.Command{
+		Use:   "watcher",
+		Short: "A watcher of cosmos's entities to PostgreSQL DB through Kafka",
+		Long:  "",
+		Run: func(cmd *cobra.Command, args []string) {
+			worker.StartWatcher(&conf)
 		},
 	}
 )
@@ -59,6 +68,8 @@ func init() {
 	viper.SetDefault("sub_head_updates", true)
 	viper.SetDefault("sync_from", -1)
 	viper.SetDefault("sync_from_db_offset", 100)
+
+	rootCmd.AddCommand(watcherCmd)
 }
 
 func Execute() error {

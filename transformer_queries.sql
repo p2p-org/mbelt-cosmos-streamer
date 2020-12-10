@@ -18,8 +18,6 @@ CREATE STREAM TRANSACTIONS_STREAM (
   "tx_hash" VARCHAR,
   "chain_id" VARCHAR,
    "block_height" BIGINT,
-   "block_hash" VARCHAR,
-   "time" BIGINT,
    "tx_index" BIGINT,
    "logs" STRING,
    "events" STRING,
@@ -35,7 +33,7 @@ CREATE STREAM TRANSACTIONS_STREAM_AVRO WITH(PARTITIONS=1, REPLICAS=1, VALUE_FORM
 FROM TRANSACTIONS_STREAM EMIT CHANGES;
 
 CREATE STREAM MESSAGES_STREAM (
-  "block_hash" VARCHAR,
+   "block_height" BIGINT,
   "tx_hash" VARCHAR,
   "tx_index" BIGINT,
   "msg_index" BIGINT,

@@ -1,10 +1,8 @@
 CREATE TABLE IF NOT EXISTS cosmos.transactions
 (
-    tx_hash       varchar(64)              NOT NULL PRIMARY KEY,
-    chain_id      varchar(64)              NOT NULL,
-    block_height  bigint                   NOT NULL,
-    block_hash    varchar(64)              NOT NULL,
-    time          timestamp WITH TIME ZONE NOT NULL,
+    tx_hash       varchar(64) NOT NULL PRIMARY KEY,
+    chain_id      varchar(64) NOT NULL,
+    block_height  bigint      NOT NULL,
     tx_index      int,
     logs          text,
     events        jsonb,
@@ -21,8 +19,6 @@ CREATE TABLE IF NOT EXISTS cosmos._transactions
     tx_hash       varchar(64) NOT NULL PRIMARY KEY,
     chain_id      varchar(64) NOT NULL,
     block_height  bigint      NOT NULL,
-    block_hash    varchar(64) NOT NULL,
-    time          bigint      NOT NULL,
     tx_index      int,
     logs          text,
     events        text,
@@ -70,9 +66,9 @@ $$
 BEGIN
     UPDATE cosmos.blocks
     SET status = 'confirmed'::status_enum
-    where hash = NEW.block_hash
+    where height = NEW.block_height
       AND num_tx = (
-        select count(*) from cosmos.transactions where block_hash = NEW.block_hash
+        select count(*) from cosmos.transactions where block_height = NEW.block_height
     )
       AND cosmos.blocks.chain_id = NEW.chain_id;
     RETURN NEW;
@@ -95,8 +91,6 @@ BEGIN
     INSERT INTO cosmos.transactions("tx_hash",
                                     "chain_id",
                                     "block_height",
-                                    "block_hash",
-                                    "time",
                                     "tx_index",
                                     "logs",
                                     "events",
@@ -109,8 +103,6 @@ BEGIN
     VALUES (NEW."tx_hash",
             NEW."chain_id",
             NEW."block_height",
-            NEW."block_hash",
-            to_timestamp(NEW."time"),
             NEW."tx_index",
             NEW."logs",
             NEW."events"::jsonb,
@@ -140,7 +132,7 @@ CREATE OR REPLACE FUNCTION cosmos.sink_trim_transactions_after_insert()
     RETURNS trigger AS
 $$
 BEGIN
-    DELETE FROM cosmos._transactions WHERE "tx_hash" = NEW."tx_hash" AND "block_hash" = NEW."block_hash";
+    DELETE FROM cosmos._transactions WHERE "tx_hash" = NEW."tx_hash" AND "block_height" = NEW."block_height";
     RETURN NEW;
 END ;
 

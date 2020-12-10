@@ -1,8 +1,7 @@
 CREATE TABLE IF NOT EXISTS cosmos.messages
 (
     id            BIGSERIAL PRIMARY KEY,
---     block_height  bigint                   NOT NULL,
-    block_hash    varchar(64) NOT NULL,
+    block_height  bigint      NOT NULL,
     tx_hash       varchar(64) NOT NULL,
     tx_index      int,
     msg_index     int,
@@ -16,7 +15,7 @@ CREATE TABLE IF NOT EXISTS cosmos.messages
 CREATE TABLE IF NOT EXISTS cosmos._messages
 (
     id            BIGSERIAL PRIMARY KEY,
-    block_hash    varchar(64) NOT NULL,
+    block_height  bigint      NOT NULL,
     tx_hash       varchar(64) NOT NULL,
     tx_index      int,
     msg_index     int,
@@ -62,7 +61,7 @@ CREATE OR REPLACE FUNCTION cosmos.sink_messages_insert()
     RETURNS trigger AS
 $$
 BEGIN
-    INSERT INTO cosmos.messages("block_hash",
+    INSERT INTO cosmos.messages("block_height",
                                 "tx_hash",
                                 "tx_index",
                                 "msg_index",
@@ -71,7 +70,7 @@ BEGIN
                                 "logs",
                                 "events",
                                 "external_info")
-    VALUES (NEW."block_hash",
+    VALUES (NEW."block_height",
             NEW."tx_hash",
             NEW."tx_index",
             NEW."msg_index",

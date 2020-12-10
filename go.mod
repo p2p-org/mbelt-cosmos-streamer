@@ -7,6 +7,7 @@ require (
 	github.com/cosmos/gaia v1.0.0
 	github.com/go-pg/migrations v6.7.3+incompatible
 	github.com/go-pg/pg v8.0.7+incompatible
+	github.com/go-redis/redis/v8 v8.4.0
 	github.com/gomodule/redigo v1.8.3
 	github.com/gorilla/websocket v1.4.2 // indirect
 	github.com/ipfs/go-cid v0.0.7

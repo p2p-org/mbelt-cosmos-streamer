@@ -196,16 +196,27 @@ services:
       context: .
       dockerfile: Dockerfile
     restart: always
+    depends_on:
+      - db
     container_name: cosmos-streamer-worker
-    #    depends_on:
-    #      - zookeeper
-    #      - broker
-    #      - schema-registry
-    #      - connect
-    #      - ksqldb-server
     environment:
       NODE_HOST: 167.233.15.85
       NODE_WS_PORT: 26657
+      NODE_LCD_PORT: 1317
+      KAFKA_HOSTS: '[broker:9092]'
+      PG_URL: postgres://sink:Ekj31R2_03S2IwLoPsWVa28_sMx_xoS@db:5432/raw?sslmode=disable
+
+  cosmos-streamer-watcher:
+    build:
+      context: .
+      dockerfile: Dockerfile.watcher
+    restart: always
+    depends_on:
+      - db
+    container_name: cosmos-streamer-watcher
+    environment:
+      NODE_HOST: ${NODE_HOST}
+      NODE_WS_PORT: ${NODE_WS_PORT}
       NODE_LCD_PORT: 1317
       KAFKA_HOSTS: '[broker:9092]'
       PG_URL: postgres://sink:Ekj31R2_03S2IwLoPsWVa28_sMx_xoS@db:5432/raw?sslmode=disable

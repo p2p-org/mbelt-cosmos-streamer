@@ -41,30 +41,20 @@ func Init(config *config.Config, ds *datastore.KafkaDatastore, pgDs *pg.PgDatast
 	}, nil
 }
 
-func (s *Service) Push(block *types.Block, tx *types.EventDataTx) {
+func (s *Service) Push(tx *types.TxResult) {
 	defer func() {
 		if r := recover(); r != nil {
 			log.Fatalln("[TransactionsService][Recover]", "Throw panic", r)
 		}
 	}()
 	txPush := map[string]interface{}{}
-	txResult := s.serialize(block, tx)
-	msgs := txResult["messages_for_push"]
-	delete(txResult, "messages_for_push")
+	txResult := s.serialize(tx)
 	txPush[fmt.Sprintf("%X", tx.Tx.Hash())] = txResult
 
-	msgsPush := map[string]interface{}{}
-
-	for _, msg := range msgs.([]map[string]interface{}) {
-		key := fmt.Sprintf("%d-%d", msg["tx_index"], msg["msg_index"])
-		msgsPush[key] = msg
-	}
-
 	s.ds.Push(datastore.TopicTransactions, txPush)
-	s.ds.Push(datastore.TopicMessages, msgsPush)
 }
 
-func (s *Service) serialize(block *types.Block, tx *types.EventDataTx) map[string]interface{} {
+func (s *Service) serialize(tx *types.TxResult) map[string]interface{} {
 	var txResult cosmosTypes.StdTx
 	err := cdc.UnmarshalBinaryLengthPrefixed([]byte(tx.Tx), &txResult)
 
@@ -84,14 +74,17 @@ func (s *Service) serialize(block *types.Block, tx *types.EventDataTx) map[strin
 		Events   interface{} `json:"events"`
 	}
 	var messages []map[string]interface{}
-	var messagesForPush []map[string]interface{}
 	var good bool = true
+
 	err = json.Unmarshal([]byte(tx.Result.Log), &logs)
 	if err != nil {
 		log.Errorf("error on marshal logs to json err %v data %v\n", err, tx.Result.Log)
 		good = false
 	} else {
 		for _, log_info := range logs {
+			if &log_info == nil {
+				log.Errorln("struct is nil logInfo")
+			}
 			if !log_info.Success {
 				good = false
 			}
@@ -120,29 +113,14 @@ func (s *Service) serialize(block *types.Block, tx *types.EventDataTx) map[strin
 				"events": string(events),
 				"log":    log_info.Log,
 			}
-			messageForPush := map[string]interface{}{
-				"block_hash":    block.Hash().String(),
-				"tx_hash":       fmt.Sprintf("%X", tx.Tx.Hash()),
-				"tx_index":      tx.Index,
-				"msg_index":     log_info.MsgIndex,
-				"msg_type":      tempMessage.MsgType,
-				"msg_info":      tempMessage.Msg,
-				"logs":          log_info.Log,
-				"events":        string(events),
-				"external_info": utils.ToVarcharArray([]string{}),
-			}
-			messagesForPush = append(messagesForPush, messageForPush)
 			messages = append(messages, message)
 		}
-
 	}
 
 	result := map[string]interface{}{
 		"tx_hash":      fmt.Sprintf("%X", tx.Tx.Hash()),
-		"chain_id":     block.ChainID,
-		"block_height": block.Height,
-		"block_hash":   block.Hash().String(),
-		"time":         block.Time.Unix(),
+		"chain_id":     s.config.ChainID,
+		"block_height": tx.Height,
 		"tx_index":     tx.Index,
 		"logs":         logs,
 		"events":       utils.ToVarcharArray([]string{}),
@@ -152,11 +130,10 @@ func (s *Service) serialize(block *types.Block, tx *types.EventDataTx) map[strin
 			"gas_used":   fmt.Sprintf("%d", tx.Result.GasUsed),
 			"gas_amount": txResult.Fee.Amount.String(),
 		},
-		"signatures":        string(signatures),
-		"memo":              txResult.GetMemo(),
-		"status":            client.PendingStatus,
-		"external_info":     utils.ToVarcharArray([]string{}),
-		"messages_for_push": messagesForPush,
+		"signatures":    string(signatures),
+		"memo":          txResult.GetMemo(),
+		"status":        client.PendingStatus,
+		"external_info": utils.ToVarcharArray([]string{}),
 	}
 
 	if good && len(logs) == len(messages) {

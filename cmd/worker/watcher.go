@@ -2,20 +2,19 @@ package worker
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
 
-	"github.com/p2p-org/mbelt-cosmos-streamer/cache"
 	"github.com/p2p-org/mbelt-cosmos-streamer/client"
 	"github.com/p2p-org/mbelt-cosmos-streamer/config"
 	"github.com/p2p-org/mbelt-cosmos-streamer/services"
+	"github.com/p2p-org/mbelt-cosmos-streamer/watcher"
 	"github.com/prometheus/common/log"
 	"github.com/tendermint/tendermint/types"
 )
 
-func Start(config *config.Config, sync bool, syncForce bool, updHead bool, syncFrom int, syncFromDbOffset int) {
+func StartWatcher(config *config.Config) {
 	exitCode := 0
 	defer os.Exit(exitCode)
 
@@ -25,15 +24,21 @@ func Start(config *config.Config, sync bool, syncForce bool, updHead bool, syncF
 		exitCode = 1
 		return
 	}
-	api := &cache.CacheApi{Api: &client.ClientApi{}}
+	syncCtx, syncCancel := context.WithCancel(context.Background())
+
+	api := &client.ClientApi{}
+	w := &watcher.Watcher{}
 	if err := api.Init(config); err != nil {
+		log.Fatalln(err)
+	}
+
+	if err := w.Init(config); err != nil {
 		log.Fatalln(err)
 	}
 
 	if err = api.Connect(); err != nil {
 		log.Fatalln(err)
 	}
-	syncCtx, syncCancel := context.WithCancel(context.Background())
 
 	go func() {
 		var gracefulStop = make(chan os.Signal)
@@ -49,24 +54,34 @@ func Start(config *config.Config, sync bool, syncForce bool, updHead bool, syncF
 		api.Stop()
 	}()
 
-	go func() {
-		for block := range api.SubscribeBlock(syncCtx) {
-			log.Infoln("Height:", block.Data.(types.EventDataNewBlock).Block.Header.Height)
-			newBlock := block.Data.(types.EventDataNewBlock)
-
-			go services.App().BlocksService().Push(&newBlock)
-		}
-	}()
-
-	go func() {
-		for tx := range api.SubscribeTxs(syncCtx) {
-			log.Infoln("tx new -> ", fmt.Sprintf("%X %d", tx.Data.(types.EventDataTx).Tx.Hash(), tx.Data.(types.EventDataTx).Height))
-			newTx := tx.Data.(types.EventDataTx)
-			block := api.GetBlock(newTx.Height)
-			go services.App().TransactionsService().Push(block, &newTx)
-		}
-	}()
+	go w.ListenDB()
+	for i := 0; i < 1; i++ {
+		go func() {
+			for {
+				select {
+				case height := <-w.Subscribe():
+					block := api.GetBlockRpc(height)
+					if block == nil {
+						continue
+					}
+					log.Infoln("new block -> ", block.Height)
+					services.App().BlocksService().Push(block)
+					txs := api.GetTxsRpc(block.Height)
+					for _, tx := range txs {
+						txResult := types.TxResult{
+							Height: tx.Height,
+							Index:  tx.Index,
+							Tx:     tx.Tx,
+							Result: tx.TxResult,
+						}
+						log.Infoln("new tx -> ", txResult.Height)
+						services.App().TransactionsService().Push(&txResult)
+					}
+				}
+			}
+		}()
+	}
 
 	<-syncCtx.Done()
-	log.Infoln("mbelt-cosmos-streamer gracefully stopped")
+	log.Infoln("mbelt-cosmos-watcher gracefully stopped")
 }

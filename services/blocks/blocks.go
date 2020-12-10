@@ -25,40 +25,40 @@ func Init(config *config.Config, kafkaDs *datastore.KafkaDatastore, pgDs *pg.PgD
 	}, nil
 }
 
-func (s *Service) Push(block *types.EventDataNewBlock) {
+func (s *Service) Push(block *types.Block) {
+
 	defer func() {
 		if r := recover(); r != nil {
 			log.Infoln("[BlocksService][Recover]", "Throw panic", r)
 		}
 	}()
-	log.Warnln("new block -> ", block.Block.Hash().String())
 	m := map[string]interface{}{}
 
-	m[block.Block.Hash().String()] = s.serialize(block)
+	m[block.Hash().String()] = s.serialize(block)
 	s.kafkaDs.Push(datastore.TopicBlocks, m)
 }
 
-func (s *Service) serialize(block *types.EventDataNewBlock) map[string]interface{} {
+func (s *Service) serialize(block *types.Block) map[string]interface{} {
 	txsHash := make([]string, 0)
 
-	for _, tx := range block.Block.Data.Txs {
+	for _, tx := range block.Data.Txs {
 		txsHash = append(txsHash, fmt.Sprintf("%X", tx.Hash()))
 	}
 
 	result := map[string]interface{}{
-		"hash":            block.Block.Hash().String(),
-		"chain_id":        block.Block.Header.ChainID,
-		"height":          uint64(block.Block.Header.Height),
-		"time":            block.Block.Header.Time.Unix(),
-		"num_tx":          uint64(block.Block.Header.NumTxs),
+		"hash":            block.Hash().String(),
+		"chain_id":        block.Header.ChainID,
+		"height":          uint64(block.Header.Height),
+		"time":            block.Header.Time.Unix(),
+		"num_tx":          uint64(block.Header.NumTxs),
 		"txs_hash":        utils.ToVarcharArray(txsHash),
-		"total_txs":       uint64(block.Block.Header.TotalTxs),
-		"last_block_hash": block.Block.Header.LastBlockID.Hash.String(),
-		"validator":       block.Block.Header.ValidatorsHash.String(),
+		"total_txs":       uint64(block.Header.TotalTxs),
+		"last_block_hash": block.Header.LastBlockID.Hash.String(),
+		"validator":       block.Header.ValidatorsHash.String(),
 		"status":          client.PendingStatus,
 	}
 
-	if uint64(block.Block.Header.NumTxs) == 0 {
+	if uint64(block.Header.NumTxs) == 0 {
 		result["status"] = client.ConfirmedStatus
 	}
 
