@@ -34,8 +34,6 @@ func (w *Watcher) ListenDB(ctx context.Context) {
 	timerGetAllLostBlocks := time.NewTicker(time.Second * 125)
 	for {
 		select {
-		case <-time.Tick(time.Second * 5):
-			log.Infoln("after 5 second")
 		case <-timerGetLostBlocks.C:
 			log.Infoln("get GetLostBlocks")
 			heights := w.db.GetLostBlocks()

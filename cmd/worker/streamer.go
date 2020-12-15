@@ -11,10 +11,28 @@ import (
 	"github.com/p2p-org/mbelt-cosmos-streamer/config"
 	"github.com/p2p-org/mbelt-cosmos-streamer/services"
 	"github.com/prometheus/common/log"
+	"github.com/spf13/cobra"
 	"github.com/tendermint/tendermint/types"
 )
 
-func StartStreamer(config *config.Config, sync bool, syncForce bool, updHead bool, syncFrom int, syncFromDbOffset int) {
+type Streamer struct {
+	Cmd *cobra.Command
+}
+
+func (s *Streamer) Init(cfg *config.Config) {
+	s.Cmd = &cobra.Command{
+		Use:   "streamer",
+		Short: "A streamer of cosmos's entities to PostgreSQL DB through Kafka",
+		Long: `This app synchronizes with current cosmos state and keeps in sync by subscribing on it's updates.
+Entities (blocks, transactions and messages) are being pushed to Kafka. There are also sinks that get
+those entities from Kafka streams and push them in PostgreSQL DB.'`,
+		Run: func(cmd *cobra.Command, args []string) {
+			s.Start(cfg)
+		},
+	}
+}
+
+func (s *Streamer) Start(config *config.Config) {
 	exitCode := 0
 	defer os.Exit(exitCode)
 

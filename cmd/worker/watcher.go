@@ -12,12 +12,34 @@ import (
 	"github.com/p2p-org/mbelt-cosmos-streamer/services"
 	"github.com/p2p-org/mbelt-cosmos-streamer/watcher"
 	"github.com/prometheus/common/log"
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 	"github.com/tendermint/tendermint/types"
 )
 
 const countWorker = 3
 
-func StartWatcher(config *config.Config) {
+type Watcher struct {
+	Worker int
+	Cmd    *cobra.Command
+}
+
+func (w *Watcher) Init(cfg *config.Config) {
+	w.Cmd = &cobra.Command{
+		Use:   "watcher",
+		Short: "A watcher of cosmos's entities to PostgreSQL DB through Kafka",
+		Long:  "",
+		Run: func(cmd *cobra.Command, args []string) {
+			w.Start(cfg)
+		},
+	}
+	w.Cmd.PersistentFlags().IntVar(&w.Worker, "worker", 3,
+		"How many workers to run for processing")
+
+	viper.SetDefault("worker", 3)
+}
+
+func (w *Watcher) Start(config *config.Config) {
 	exitCode := 0
 	defer os.Exit(exitCode)
 
@@ -30,12 +52,12 @@ func StartWatcher(config *config.Config) {
 	syncCtx, syncCancel := context.WithCancel(context.Background())
 
 	api := &client.ClientApi{}
-	w := &watcher.Watcher{}
+	watcherDB := &watcher.Watcher{}
 	if err := api.Init(config); err != nil {
 		log.Fatalln(err)
 	}
 
-	if err := w.Init(config); err != nil {
+	if err := watcherDB.Init(config); err != nil {
 		log.Fatalln(err)
 	}
 
@@ -59,12 +81,12 @@ func StartWatcher(config *config.Config) {
 		api.Stop()
 	}()
 
-	go w.ListenDB(syncCtx)
+	go watcherDB.ListenDB(syncCtx)
 	log.Infoln("start processing functions")
 	for i := 0; i < countWorker; i++ {
 		wg.Add(2)
-		go processingBlock(syncCtx, wg, w.SubscribeBlock(), api)
-		go processingTx(syncCtx, wg, w.SubscribeTx(), api)
+		go processingBlock(syncCtx, wg, watcherDB.SubscribeBlock(), api)
+		go processingTx(syncCtx, wg, watcherDB.SubscribeTx(), api)
 	}
 	<-syncCtx.Done()
 	log.Infoln("mbelt-cosmos-watcher gracefully stopped")
