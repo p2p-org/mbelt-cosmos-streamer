@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 
 	"github.com/p2p-org/mbelt-cosmos-streamer/client"
@@ -13,6 +14,8 @@ import (
 	"github.com/prometheus/common/log"
 	"github.com/tendermint/tendermint/types"
 )
+
+const countWorker = 3
 
 func StartWatcher(config *config.Config) {
 	exitCode := 0
@@ -39,6 +42,7 @@ func StartWatcher(config *config.Config) {
 	if err = api.Connect(); err != nil {
 		log.Fatalln(err)
 	}
+	wg := &sync.WaitGroup{}
 
 	go func() {
 		var gracefulStop = make(chan os.Signal)
@@ -51,37 +55,54 @@ func StartWatcher(config *config.Config) {
 		log.Infoln("Wait for graceful shutdown to finish.")
 
 		syncCancel()
+		wg.Wait()
 		api.Stop()
 	}()
 
-	go w.ListenDB()
-	for i := 0; i < 1; i++ {
-		go func() {
-			for {
-				select {
-				case height := <-w.Subscribe():
-					block := api.GetBlockRpc(height)
-					if block == nil {
-						continue
-					}
-					log.Infoln("new block -> ", block.Height)
-					services.App().BlocksService().Push(block)
-					txs := api.GetTxsRpc(block.Height)
-					for _, tx := range txs {
-						txResult := types.TxResult{
-							Height: tx.Height,
-							Index:  tx.Index,
-							Tx:     tx.Tx,
-							Result: tx.TxResult,
-						}
-						log.Infoln("new tx -> ", txResult.Height)
-						services.App().TransactionsService().Push(&txResult)
-					}
-				}
-			}
-		}()
+	go w.ListenDB(syncCtx)
+	log.Infoln("start processing functions")
+	for i := 0; i < countWorker; i++ {
+		wg.Add(2)
+		go processingBlock(syncCtx, wg, w.SubscribeBlock(), api)
+		go processingTx(syncCtx, wg, w.SubscribeTx(), api)
 	}
-
 	<-syncCtx.Done()
 	log.Infoln("mbelt-cosmos-watcher gracefully stopped")
+}
+
+func processingBlock(ctx context.Context, wg *sync.WaitGroup, heightChan <-chan int64, api *client.ClientApi) {
+	for {
+		select {
+		case height := <-heightChan:
+			block := api.GetBlockRpc(height)
+			if block == nil {
+				continue
+			}
+			log.Infoln("new block -> ", block.Height)
+			services.App().BlocksService().Push(block)
+		case <-ctx.Done():
+			wg.Done()
+		}
+	}
+}
+
+func processingTx(ctx context.Context, wg *sync.WaitGroup, heightChan <-chan int64, api *client.ClientApi) {
+	for {
+		select {
+		case height := <-heightChan:
+			txs := api.GetTxsRpc(height)
+			for _, tx := range txs {
+				txResult := types.TxResult{
+					Height: tx.Height,
+					Index:  tx.Index,
+					Tx:     tx.Tx,
+					Result: tx.TxResult,
+				}
+				log.Infoln("new tx -> ", txResult.Height)
+				services.App().TransactionsService().Push(&txResult)
+			}
+		case <-ctx.Done():
+			wg.Done()
+		}
+	}
 }

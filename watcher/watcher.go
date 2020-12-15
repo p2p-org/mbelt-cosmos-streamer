@@ -1,11 +1,16 @@
 package watcher
 
 import (
+	"context"
 	"time"
 
 	"github.com/p2p-org/mbelt-cosmos-streamer/config"
 	"github.com/p2p-org/mbelt-cosmos-streamer/datastore/pg"
+	"github.com/prometheus/common/log"
 )
+
+const Tx = "tx"
+const Block = "block"
 
 type Watcher struct {
 	CacheWatcher
@@ -18,23 +23,61 @@ func (w *Watcher) Init(cfg *config.Config) error {
 		return err
 	}
 	w.InitCache()
-	w.GetAllLostBlock()
+	w.GetAllLostBlocks()
+	w.GetAllLostTxs()
 	return nil
 }
 
-func (w *Watcher) ListenDB() {
+func (w *Watcher) ListenDB(ctx context.Context) {
+	timerGetLostBlocks := time.NewTicker(time.Second * 25)
+	timerGetAllLostTransactions := time.NewTicker(time.Second * 35)
+	timerGetAllLostBlocks := time.NewTicker(time.Second * 125)
 	for {
-		heights := w.db.GetLostBlocks()
-		for _, height := range heights {
-			w.Store(height)
+		select {
+		case <-time.Tick(time.Second * 5):
+			log.Infoln("after 5 second")
+		case <-timerGetLostBlocks.C:
+			log.Infoln("get GetLostBlocks")
+			heights := w.db.GetLostBlocks()
+			for _, height := range heights {
+				w.Store(height, Block)
+				w.Store(height, Tx)
+			}
+		case <-timerGetAllLostTransactions.C:
+			log.Infoln("get GetAllLostTransactions")
+
+			heights := w.db.GetAllLostTransactions()
+			for _, height := range heights {
+				w.Store(height, Tx)
+			}
+		case <-timerGetAllLostBlocks.C:
+			log.Infoln("get GetAllLostBlocks")
+
+			heights := w.db.GetAllLostBlocks()
+			for _, height := range heights {
+				w.Store(height, Block)
+				w.Store(height, Tx)
+			}
+		case <-ctx.Done():
+			timerGetLostBlocks.Stop()
+			timerGetAllLostTransactions.Stop()
+			timerGetAllLostBlocks.Stop()
+			break
+
 		}
-		time.Sleep(time.Minute)
 	}
 }
 
-func (w *Watcher) GetAllLostBlock() {
+func (w *Watcher) GetAllLostBlocks() {
 	heights := w.db.GetAllLostBlocks()
 	for _, height := range heights {
-		w.Store(height)
+		w.Store(height, Block)
+	}
+}
+
+func (w *Watcher) GetAllLostTxs() {
+	heights := w.db.GetAllLostBlocks()
+	for _, height := range heights {
+		w.Store(height, Tx)
 	}
 }

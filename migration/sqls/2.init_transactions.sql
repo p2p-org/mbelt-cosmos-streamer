@@ -64,13 +64,14 @@ CREATE OR REPLACE FUNCTION cosmos.block_status_change()
     RETURNS trigger AS
 $$
 BEGIN
-    UPDATE cosmos.blocks
+    UPDATE cosmos.blocks as b
     SET status = 'confirmed'::status_enum
     where height = NEW.block_height
       AND num_tx = (
         select count(*) from cosmos.transactions where block_height = NEW.block_height
     )
-      AND cosmos.blocks.chain_id = NEW.chain_id;
+      and NEW.tx_hash = any(b.txs_hash)
+      AND b.chain_id = NEW.chain_id;
     RETURN NEW;
 END ;
 

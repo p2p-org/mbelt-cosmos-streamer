@@ -196,8 +196,6 @@ services:
       context: .
       dockerfile: Dockerfile
     restart: always
-    depends_on:
-      - db
     container_name: cosmos-streamer-worker
     environment:
       NODE_HOST: 167.233.15.85
@@ -211,8 +209,6 @@ services:
       context: .
       dockerfile: Dockerfile.watcher
     restart: always
-    depends_on:
-      - db
     container_name: cosmos-streamer-watcher
     environment:
       NODE_HOST: ${NODE_HOST}
