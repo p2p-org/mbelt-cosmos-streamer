@@ -10,10 +10,7 @@ CREATE TABLE IF NOT EXISTS cosmos.consistency
     unique (block_height)
 );
 
-CREATE INDEX messages_block_height_idx ON cosmos.consistency (block_height);
-
-INSERT INTO cosmos.consistency (block_height, max_block_height, count_blocks, count_txs, count_messages, created_at)
-VALUES (0, 0, 0, 0, 0, now());
+CREATE INDEX consistency_block_height_idx ON cosmos.consistency (block_height);
 
 CREATE OR REPLACE FUNCTION cosmos.sink_trim_consistency_before_insert()
     RETURNS trigger AS

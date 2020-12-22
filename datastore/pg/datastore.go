@@ -24,7 +24,7 @@ const queryGetAllLostTransactions = `select b.height from (select unnest(txs_has
 
 const queryBlocksWithCountTxs = `SELECT b.height, b.num_tx, count(t.block_height) as count_txs FROM cosmos.blocks b
                                                                         left join cosmos.transactions t on t.block_height = b.height and t.chain_id = b.chain_id
-where height > (select block_height from cosmos.consistency order by block_height desc limit 1)
+where height > coalesce((select block_height from cosmos.consistency order by block_height desc limit 1), 0)
 group by t.block_height, b.height,  num_tx order by b.height limit 500`
 
 type BlocksWithCountTxs struct {
