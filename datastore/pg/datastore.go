@@ -107,10 +107,12 @@ func (ds *PgDatastore) GetAllLostTransactions() []int64 {
 func (ds *PgDatastore) GetLastConsistencyBlock() (height int64) {
 	row := ds.conn.QueryRow("select block_height from cosmos.consistency order by block_height desc limit 1")
 	row.Scan(&height)
-	if height == 0 {
-		row := ds.conn.QueryRow("select min(height)  from cosmos.blocks")
-		row.Scan(&height)
-	}
+	return height
+}
+
+func (ds *PgDatastore) GetMinBlockHeight() (height int64) {
+	row := ds.conn.QueryRow("select min(height) from cosmos.blocks")
+	row.Scan(&height)
 	return height
 }
 
