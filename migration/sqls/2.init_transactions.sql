@@ -1,33 +1,35 @@
 CREATE TABLE IF NOT EXISTS cosmos.transactions
 (
-    tx_hash       varchar(64) NOT NULL PRIMARY KEY,
-    chain_id      varchar(64) NOT NULL,
-    block_height  bigint      NOT NULL,
-    tx_index      int,
-    logs          text,
-    events        jsonb,
-    msgs          jsonb,
-    fee           jsonb,
-    signatures    jsonb,
-    memo          varchar(1024),
-    status        status_enum,
-    external_info jsonb -- TODO Is it necessary at all?
+    tx_hash        varchar(64) NOT NULL PRIMARY KEY,
+    chain_id       varchar(64) NOT NULL,
+    block_height   bigint      NOT NULL,
+    tx_index       int,
+    count_messages int,
+    logs           text,
+    events         jsonb,
+    msgs           jsonb,
+    fee            jsonb,
+    signatures     jsonb,
+    memo           varchar(1024),
+    status         status_enum,
+    external_info  jsonb -- TODO Is it necessary at all?
 );
 
 CREATE TABLE IF NOT EXISTS cosmos._transactions
 (
-    tx_hash       varchar(64) NOT NULL PRIMARY KEY,
-    chain_id      varchar(64) NOT NULL,
-    block_height  bigint      NOT NULL,
-    tx_index      int,
-    logs          text,
-    events        text,
-    msgs          text,
-    fee           text,
-    signatures    text,
-    memo          varchar(1024),
-    status        varchar(64),
-    external_info text -- TODO Is it necessary at all?
+    tx_hash        varchar(64) NOT NULL PRIMARY KEY,
+    chain_id       varchar(64) NOT NULL,
+    block_height   bigint      NOT NULL,
+    tx_index       int,
+    count_messages int,
+    logs           text,
+    events         text,
+    msgs           text,
+    fee            text,
+    signatures     text,
+    memo           varchar(1024),
+    status         varchar(64),
+    external_info  text -- TODO Is it necessary at all?
 );
 --
 -- CREATE TABLE IF NOT EXISTS cosmos.transactions_0
@@ -60,29 +62,42 @@ CREATE TABLE IF NOT EXISTS cosmos._transactions
 -- EXECUTE FUNCTION transactions_insert_trigger();
 
 
-CREATE OR REPLACE FUNCTION cosmos.block_status_change()
-    RETURNS trigger AS
+-- CREATE OR REPLACE FUNCTION cosmos.block_status_change(height bigint)
+--     RETURNS VOID AS
+-- $$
+-- BEGIN
+--     UPDATE cosmos.blocks as b
+--     SET "status" = 'confirmed'::status_enum
+--     where b."height" = height
+--       AND "num_tx" = (
+--         select count(*) from cosmos.transactions where "block_height" = height
+--     );
+-- END ;
+--
+-- $$
+--     LANGUAGE 'plpgsql';
+
+CREATE OR REPLACE FUNCTION
+    cosmos.block_status_change(h bigint)
+    RETURNS VOID AS
 $$
 BEGIN
-    UPDATE cosmos.blocks as b
-    SET status = 'confirmed'::status_enum
-    where height = NEW.block_height
-      AND num_tx = (
-        select count(*) from cosmos.transactions where block_height = NEW.block_height
-    )
-      and NEW.tx_hash = any(b.txs_hash)
-      AND b.chain_id = NEW.chain_id;
-    RETURN NEW;
-END ;
+    UPDATE cosmos.blocks
+    SET "status" = 'confirmed'::status_enum
+    where "height" = h
+      AND "num_tx" = (
+        select count(*)
+        from cosmos.transactions
+        where "block_height" = h
+    );
+END;
+$$ LANGUAGE plpgsql;
 
-$$
-    LANGUAGE 'plpgsql';
-
-CREATE TRIGGER trg_block_status_change
-    AFTER INSERT
-    ON cosmos.transactions
-    FOR EACH ROW
-EXECUTE PROCEDURE cosmos.block_status_change();
+-- CREATE TRIGGER trg_block_status_change
+--     AFTER INSERT
+--     ON cosmos.transactions
+--     FOR EACH ROW
+-- EXECUTE PROCEDURE cosmos.block_status_change();
 
 
 CREATE OR REPLACE FUNCTION cosmos.sink_transactions_insert()
@@ -93,6 +108,7 @@ BEGIN
                                     "chain_id",
                                     "block_height",
                                     "tx_index",
+                                    "count_messages",
                                     "logs",
                                     "events",
                                     "msgs",
@@ -105,6 +121,7 @@ BEGIN
             NEW."chain_id",
             NEW."block_height",
             NEW."tx_index",
+            NEW."count_messages",
             NEW."logs",
             NEW."events"::jsonb,
             NEW."msgs"::jsonb,
@@ -114,6 +131,8 @@ BEGIN
             NEW."status"::status_enum,
             NEW."external_info"::jsonb)
     ON CONFLICT DO NOTHING;
+
+    PERFORM cosmos.block_status_change(NEW."block_height");
 
     RETURN NEW;
 END ;
@@ -133,7 +152,11 @@ CREATE OR REPLACE FUNCTION cosmos.sink_trim_transactions_after_insert()
     RETURNS trigger AS
 $$
 BEGIN
-    DELETE FROM cosmos._transactions WHERE "tx_hash" = NEW."tx_hash" AND "block_height" = NEW."block_height";
+    DELETE
+    FROM cosmos._transactions
+    WHERE "tx_hash" = NEW."tx_hash"
+      AND "block_height" = NEW."block_height"
+      AND "chain_id" = NEW."chain_id";
     RETURN NEW;
 END ;
 

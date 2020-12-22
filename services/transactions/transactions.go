@@ -142,13 +142,14 @@ func (s *Service) serialize(tx *types.TxResult) map[string]interface{} {
 	}
 
 	result := map[string]interface{}{
-		"tx_hash":      fmt.Sprintf("%X", tx.Tx.Hash()),
-		"chain_id":     s.config.ChainID,
-		"block_height": tx.Height,
-		"tx_index":     tx.Index,
-		"logs":         logs,
-		"events":       utils.ToVarcharArray([]string{}),
-		"msgs":         messages,
+		"tx_hash":        fmt.Sprintf("%X", tx.Tx.Hash()),
+		"chain_id":       s.config.ChainID,
+		"block_height":   tx.Height,
+		"tx_index":       tx.Index,
+		"count_messages": len(messages),
+		"logs":           logs,
+		"events":         utils.ToVarcharArray([]string{}),
+		"msgs":           messages,
 		"fee": map[string]interface{}{
 			"gas_wanted": fmt.Sprintf("%d", tx.Result.GasWanted),
 			"gas_used":   fmt.Sprintf("%d", tx.Result.GasUsed),

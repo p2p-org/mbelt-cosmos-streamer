@@ -69,6 +69,7 @@ CREATE INDEX blocks_0_status_idx ON cosmos.blocks_0 (status);
 -- EXECUTE FUNCTION cosmos.blocks_insert_trigger();
 
 
+
 -- Blocks
 CREATE OR REPLACE FUNCTION cosmos.sink_blocks_insert()
     RETURNS trigger AS
@@ -95,6 +96,14 @@ BEGIN
             NEW."txs_hash"::varchar(256)[],
             NEW."status"::status_enum)
     ON CONFLICT DO NOTHING;
+
+
+    UPDATE cosmos.blocks as b
+    SET status = 'confirmed'::status_enum
+    where height = NEW."height"
+      AND num_tx = (
+        select count(*) from cosmos.transactions as t where "block_height" = NEW."height" and t."chain_id" = NEW."chain_id"
+    );
 
     RETURN NEW;
 END ;

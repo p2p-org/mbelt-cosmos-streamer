@@ -80,8 +80,7 @@ func (s *Streamer) Start(config *config.Config) {
 	go func() {
 		for tx := range api.SubscribeTxs(syncCtx) {
 			log.Infoln("tx new -> ", fmt.Sprintf("%X %d", tx.Data.(types.EventDataTx).Tx.Hash(), tx.Data.(types.EventDataTx).Height))
-			newTx := tx.Data.(types.TxResult)
-			// block := api.GetBlock(syncCtx, newTx.Height)
+			newTx := tx.Data.(types.EventDataTx).TxResult
 			go services.App().TransactionsService().Push(&newTx)
 		}
 	}()

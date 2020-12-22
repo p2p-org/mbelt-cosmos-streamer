@@ -187,39 +187,39 @@ services:
     ports:
       - "5432:5432"
     environment:
-      POSTGRES_PASSWORD: Ekj31R2_03S2IwLoPsWVa28_sMx_xoS
-      POSTGRES_USER: sink
-      POSTGRES_DB: raw
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_DB: ${POSTGRES_DB}
 
-  cosmos-streamer-worker:
+  cosmos-streamer:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.streamer
     restart: always
-    container_name: cosmos-streamer-worker
+    container_name: cosmos-streamer
     environment:
-      NODE_HOST: 167.233.15.85
-      NODE_WS_PORT: 26657
-      NODE_LCD_PORT: 1317
+      NODE_HOST: ${NODE_HOST}
+      NODE_WS_PORT: ${NODE_WS_PORT}
+      NODE_LCD_PORT: ${NODE_LCD_PORT}
       KAFKA_HOSTS: '[broker:9092]'
-      PG_URL: postgres://sink:Ekj31R2_03S2IwLoPsWVa28_sMx_xoS@db:5432/raw?sslmode=disable
+      PG_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?sslmode=disable
 
-  cosmos-streamer-watcher:
+  cosmos-watcher:
     build:
       context: .
       dockerfile: Dockerfile.watcher
     restart: always
-    container_name: cosmos-streamer-watcher
+    container_name: cosmos-watcher
     environment:
       NODE_HOST: ${NODE_HOST}
       NODE_WS_PORT: ${NODE_WS_PORT}
-      NODE_LCD_PORT: 1317
+      NODE_LCD_PORT: ${NODE_LCD_PORT}
       KAFKA_HOSTS: '[broker:9092]'
-      PG_URL: postgres://sink:Ekj31R2_03S2IwLoPsWVa28_sMx_xoS@db:5432/raw?sslmode=disable
+      PG_URL:  postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?sslmode=disable
 
-networks:
-  default:
-    driver: bridge
-    ipam:
-      config:
-        - subnet: 172.16.57.0/24
+#networks:
+#  default:
+#    driver: bridge
+#    ipam:
+#      config:
+#        - subnet: 172.16.57.0/24

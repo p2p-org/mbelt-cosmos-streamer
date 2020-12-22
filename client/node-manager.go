@@ -69,7 +69,7 @@ func (nm *ClientApi) Connect() error {
 }
 
 func (nm *ClientApi) SubscribeBlock(ctx context.Context) <-chan ctypes.ResultEvent {
-	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
 	blocks, err := nm.wsClient.Subscribe(ctx, "test-client", blockQuery)
 	if err != nil {
@@ -79,7 +79,7 @@ func (nm *ClientApi) SubscribeBlock(ctx context.Context) <-chan ctypes.ResultEve
 }
 
 func (nm *ClientApi) SubscribeTxs(ctx context.Context) <-chan ctypes.ResultEvent {
-	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
 	txs, err := nm.wsClient.Subscribe(ctx, "test-client", txQuery)
 	if err != nil {
