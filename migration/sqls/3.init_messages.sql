@@ -12,6 +12,12 @@ CREATE TABLE IF NOT EXISTS cosmos.messages
     external_info jsonb -- TODO Is it necessary at all?
 );
 
+CREATE INDEX messages_block_height_idx ON cosmos.messages (block_height);
+CREATE INDEX messages_tx_hash_idx ON cosmos.messages (tx_hash);
+CREATE INDEX messages_tx_index_idx ON cosmos.messages (tx_index);
+CREATE INDEX messages_msg_index_idx ON cosmos.messages (msg_index);
+
+
 CREATE TABLE IF NOT EXISTS cosmos._messages
 (
     id            BIGSERIAL PRIMARY KEY,

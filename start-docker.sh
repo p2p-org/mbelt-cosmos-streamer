@@ -22,5 +22,4 @@ curl -X "POST" -H "Accept:application/json" -H "Content-Type: application/json" 
 curl -X "POST" -H "Accept:application/json" -H "Content-Type: application/json" --data @connectors/transactions_stream_avro_sink.json http://"${HOST}":8083/connectors
 curl -X "POST" -H "Accept:application/json" -H "Content-Type: application/json" --data @connectors/messages_stream_avro_sink.json http://"${HOST}":8083/connectors
 
-docker-compose up -d cosmos-streamer
-docker-compose up -d cosmos-watcher
+docker-compose up -d cosmos-streamer cosmos-watcher cosmos-consistency

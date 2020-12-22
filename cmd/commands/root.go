@@ -9,9 +9,10 @@ import (
 )
 
 var (
-	cfg            config.Config
-	watcherWorker  = worker.Watcher{}
-	streamerWorker = worker.Streamer{}
+	cfg               config.Config
+	watcherWorker     = worker.Watcher{}
+	streamerWorker    = worker.Streamer{}
+	consistencyWorker = worker.Consistency{}
 )
 
 func init() {
@@ -20,8 +21,10 @@ func init() {
 	}
 	streamerWorker.Init(&cfg)
 	watcherWorker.Init(&cfg)
+	consistencyWorker.Init(&cfg)
 
 	streamerWorker.Cmd.AddCommand(watcherWorker.Cmd)
+	streamerWorker.Cmd.AddCommand(consistencyWorker.Cmd)
 }
 
 func Execute() error {

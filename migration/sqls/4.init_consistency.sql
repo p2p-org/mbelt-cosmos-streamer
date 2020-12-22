@@ -10,6 +10,8 @@ CREATE TABLE IF NOT EXISTS cosmos.consistency
     unique (block_height)
 );
 
+CREATE INDEX messages_block_height_idx ON cosmos.consistency (block_height);
+
 INSERT INTO cosmos.consistency (block_height, max_block_height, count_blocks, count_txs, count_messages, created_at)
 VALUES (0, 0, 0, 0, 0, now());
 
@@ -51,50 +53,3 @@ BEGIN
 END
 $BODY$
     LANGUAGE plpgsql;
-
-CREATE OR REPLACE FUNCTION cosmos.process_consistency() RETURNS SETOF VOID AS
-$BODY$
-DECLARE
-    countTxs bigint;
-    r        cosmos.blocks%rowtype;
-BEGIN
-    <<for_block>>
-    FOR r IN
-        SELECT *
-        FROM cosmos.blocks
-        where height > (select block_height from cosmos.consistency order by block_height desc limit 1)
-        order by height
-        limit 100000
-        LOOP
-            perform cosmos.block_status_change(r.height);
-
-            countTxs =
-                    (select count(*) from cosmos.transactions where block_height = r.height and chain_id = r.chain_id);
-            if countTxs = r.num_tx then
-
-                else
-                    perform cosmos.set_consistency(r.height - 1);
-                    EXIT for_block;
-                    raise warning 'if setConsistency';
-
-            end if;
-        END LOOP;
-END
-$BODY$
-    LANGUAGE plpgsql;
-
-CREATE OR REPLACE FUNCTION cosmos.trigger_process_consistency() RETURNS trigger AS
-$BODY$
-BEGIN
-    perform cosmos.process_consistency();
-    RETURN NEW;
-END
-$BODY$
-    LANGUAGE plpgsql;
-
-CREATE TRIGGER trg_consistency_sink_blocks
-    AFTER INSERT
-    ON cosmos.blocks
-    FOR EACH ROW
-EXECUTE PROCEDURE cosmos.trigger_process_consistency();
-

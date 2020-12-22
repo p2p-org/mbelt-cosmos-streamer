@@ -22,6 +22,17 @@ const queryGetAllLostBlocks = `select generate_series as h
 const queryGetAllLostTransactions = `select b.height from (select unnest(txs_hash) as tx_hash, height from cosmos.blocks where num_tx > 0 limit 100000) as b
     left join cosmos.transactions t on t.tx_hash = b.tx_hash where t.tx_hash is null order by b.height`
 
+const queryBlocksWithCountTxs = `SELECT b.height, b.num_tx, count(t.block_height) as count_txs FROM cosmos.blocks b
+                                                                        left join cosmos.transactions t on t.block_height = b.height and t.chain_id = b.chain_id
+where height > (select block_height from cosmos.consistency order by block_height desc limit 1)
+group by t.block_height, b.height,  num_tx order by b.height limit 500`
+
+type BlocksWithCountTxs struct {
+	Height   int64
+	NumTx    int64
+	CountTxs int64
+}
+
 type PgDatastore struct {
 	conn *sql.DB
 }
@@ -91,4 +102,29 @@ func (ds *PgDatastore) GetAllLostTransactions() []int64 {
 	}
 
 	return heights
+}
+
+func (ds *PgDatastore) GetLastConsistencyBlock() (height int64) {
+	row := ds.conn.QueryRow("select block_height from cosmos.consistency order by block_height desc limit 1")
+	row.Scan(&height)
+	if height == 0 {
+		row := ds.conn.QueryRow("select min(height)  from cosmos.blocks")
+		row.Scan(&height)
+	}
+	return height
+}
+
+func (ds *PgDatastore) GetBlocksWithCountTxs() []BlocksWithCountTxs {
+	var stats []BlocksWithCountTxs
+	rows, _ := ds.conn.Query(queryBlocksWithCountTxs)
+	for rows.Next() {
+		var item BlocksWithCountTxs
+		rows.Scan(&item.Height, &item.NumTx, &item.CountTxs)
+		stats = append(stats, item)
+	}
+	return stats
+}
+
+func (ds *PgDatastore) SetConsistency(height int64) {
+	ds.conn.Exec("select cosmos.set_consistency($1)", height)
 }

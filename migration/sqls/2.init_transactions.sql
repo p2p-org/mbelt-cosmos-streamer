@@ -15,6 +15,10 @@ CREATE TABLE IF NOT EXISTS cosmos.transactions
     external_info  jsonb -- TODO Is it necessary at all?
 );
 
+CREATE INDEX transactions_block_height_idx ON cosmos.transactions (block_height);
+CREATE INDEX transactions_chain_id_idx ON cosmos.transactions (chain_id);
+CREATE INDEX transactions_tx_index_idx ON cosmos.transactions (tx_index);
+
 CREATE TABLE IF NOT EXISTS cosmos._transactions
 (
     tx_hash        varchar(64) NOT NULL PRIMARY KEY,

@@ -16,6 +16,9 @@ CREATE TABLE IF NOT EXISTS cosmos.blocks
     "status"          status_enum,
     unique (hash, height)
 );
+CREATE INDEX blocks_height_index ON cosmos.blocks (height);
+CREATE INDEX blocks_chain_id_index ON cosmos.blocks (chain_id);
+
 
 -- Fix for unquoting varchar json
 CREATE OR REPLACE FUNCTION varchar_to_jsonb(varchar) RETURNS jsonb AS

@@ -217,9 +217,20 @@ services:
       KAFKA_HOSTS: '[broker:9092]'
       PG_URL:  postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?sslmode=disable
 
-networks:
-  default:
-    driver: bridge
-    ipam:
-      config:
-        - subnet: 172.16.57.0/24
+  cosmos-consistency:
+    build:
+      context: .
+      dockerfile: Dockerfile.consistency
+    restart: always
+    container_name: cosmos-consistency
+    environment:
+      NODE_HOST: ${NODE_HOST}
+      KAFKA_HOSTS: '[broker:9092]'
+      PG_URL:  postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?sslmode=disable
+
+#networks:
+#  default:
+#    driver: bridge
+#    ipam:
+#      config:
+#        - subnet: 172.16.57.0/24
