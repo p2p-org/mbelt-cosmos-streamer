@@ -136,8 +136,6 @@ BEGIN
             NEW."external_info"::jsonb)
     ON CONFLICT DO NOTHING;
 
-    PERFORM cosmos.block_status_change(NEW."block_height");
-
     RETURN NEW;
 END ;
 

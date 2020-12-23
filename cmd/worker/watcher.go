@@ -17,8 +17,6 @@ import (
 	"github.com/tendermint/tendermint/types"
 )
 
-const countWorker = 3
-
 type Watcher struct {
 	Worker int
 	Cmd    *cobra.Command
@@ -37,6 +35,12 @@ func (w *Watcher) Init(cfg *config.Config) {
 		"How many workers to run for processing")
 
 	viper.SetDefault("worker", 3)
+
+	if cfg.Watcher.Worker != -1 {
+		w.Worker = cfg.Watcher.Worker
+	}
+	log.Infoln("Start watcher with worker: ", w.Worker)
+
 }
 
 func (w *Watcher) Start(config *config.Config) {
@@ -81,9 +85,12 @@ func (w *Watcher) Start(config *config.Config) {
 		api.Stop()
 	}()
 
+	if config.Watcher.StartHeight != -1 {
+		watcherDB.Store(config.Watcher.StartHeight, watcher.Block)
+	}
 	go watcherDB.ListenDB(syncCtx)
 	log.Infoln("start processing functions")
-	for i := 0; i < countWorker; i++ {
+	for i := 0; i < w.Worker; i++ {
 		wg.Add(2)
 		go processingBlock(syncCtx, wg, watcherDB.SubscribeBlock(), api)
 		go processingTx(syncCtx, wg, watcherDB.SubscribeTx(), api)

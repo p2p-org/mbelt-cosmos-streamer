@@ -62,12 +62,12 @@ func (c *Consistency) Start(cfg *config.Config) {
 				blocks := db.GetBlocksWithCountTxs()
 				var blockSetter int64
 				for _, block := range blocks {
-					log.Infoln(block.Height, c.lastBlock)
 					if block.Height == c.lastBlock {
 						if block.CountTxs != block.NumTx {
 							blockSetter = block.Height - 1
 						} else {
 							blockSetter = block.Height
+							db.BlockStatusChange(block.Height)
 							c.lastBlock++
 						}
 					} else {

@@ -130,3 +130,7 @@ func (ds *PgDatastore) GetBlocksWithCountTxs() []BlocksWithCountTxs {
 func (ds *PgDatastore) SetConsistency(height int64) {
 	ds.conn.Exec("select cosmos.set_consistency($1::bigint)", height)
 }
+
+func (ds *PgDatastore) BlockStatusChange(height int64) {
+	ds.conn.Exec("select cosmos.block_status_change($1)", height)
+}

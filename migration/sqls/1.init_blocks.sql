@@ -100,14 +100,6 @@ BEGIN
             NEW."status"::status_enum)
     ON CONFLICT DO NOTHING;
 
-
-    UPDATE cosmos.blocks as b
-    SET status = 'confirmed'::status_enum
-    where height = NEW."height"
-      AND num_tx = (
-        select count(*) from cosmos.transactions as t where "block_height" = NEW."height" and t."chain_id" = NEW."chain_id"
-    );
-
     RETURN NEW;
 END ;
 

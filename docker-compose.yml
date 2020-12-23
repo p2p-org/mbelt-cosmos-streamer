@@ -211,6 +211,8 @@ services:
     restart: always
     container_name: cosmos-watcher
     environment:
+      WATCHER_START_HEIGHT: ${WATCHER_START_HEIGHT}
+      WATCHER_WORKER: ${WATCHER_WORKER}
       NODE_HOST: ${NODE_HOST}
       NODE_WS_PORT: ${NODE_WS_PORT}
       NODE_LCD_PORT: ${NODE_LCD_PORT}

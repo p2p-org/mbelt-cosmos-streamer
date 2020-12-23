@@ -10,4 +10,9 @@ type Config struct {
 	}
 	KafkaHosts []string `required:"true" env:"KAFKA_HOSTS"`
 	PgUrl      string   `required:"true" env:"PG_URL"`
+
+	Watcher struct {
+		Worker      int   `env:"WATCHER_WORKER" default:"-1"`
+		StartHeight int64 `env:"WATCHER_START_HEIGHT" default:"-1"`
+	}
 }
