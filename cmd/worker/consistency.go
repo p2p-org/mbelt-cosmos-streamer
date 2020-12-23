@@ -59,14 +59,11 @@ func (c *Consistency) Start(cfg *config.Config) {
 		for {
 			select {
 			case <-time.Tick(time.Second * 2):
-				if c.lastBlock == 0 {
-					c.lastBlock = db.GetMinBlockHeight()
-				}
 				blocks := db.GetBlocksWithCountTxs()
 				var blockSetter int64
 				for _, block := range blocks {
 					log.Infoln(block.Height, c.lastBlock)
-					if block.Height == c.lastBlock || block.Height == (c.lastBlock+1) {
+					if block.Height == c.lastBlock {
 						if block.CountTxs != block.NumTx {
 							blockSetter = block.Height - 1
 						} else {
@@ -77,6 +74,7 @@ func (c *Consistency) Start(cfg *config.Config) {
 						break
 					}
 				}
+				c.lastBlock = blockSetter
 				db.SetConsistency(blockSetter)
 				log.Infoln("set block consistency: ", blockSetter)
 			}
