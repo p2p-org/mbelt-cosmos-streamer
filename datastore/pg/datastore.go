@@ -17,7 +17,7 @@ const queryGetLostBlocks = `SELECT t1.height + 1 as d FROM cosmos.blocks AS t1
 
 const queryGetAllLostBlocks = `select generate_series as h 
 			from generate_series((select min(height) from cosmos.blocks), (select max(height) - 1 from cosmos.blocks)) 
-					left join cosmos.blocks on generate_series.generate_series = height where height IS NULL order by h limit 1000;`
+					left join cosmos.blocks on generate_series.generate_series = height where height IS NULL order by h limit 10000;`
 
 const queryGetAllLostTransactions = `select distinct(b.height) from (select unnest(txs_hash) as tx_hash, height from cosmos.blocks where num_tx > 0 order by height limit 100000) as b
     left join cosmos.transactions t on t.tx_hash = b.tx_hash where t.tx_hash is null order by b.height asc`
