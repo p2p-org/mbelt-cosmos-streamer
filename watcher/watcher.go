@@ -29,9 +29,9 @@ func (w *Watcher) Init(cfg *config.Config) error {
 }
 
 func (w *Watcher) ListenDB(ctx context.Context) {
-	timerGetLostBlocks := time.NewTicker(time.Second * 25)
-	timerGetAllLostTransactions := time.NewTicker(time.Second * 35)
-	timerGetAllLostBlocks := time.NewTicker(time.Second * 65)
+	timerGetLostBlocks := time.NewTicker(time.Second * 15)
+	timerGetAllLostTransactions := time.NewTicker(time.Second * 20)
+	timerGetAllLostBlocks := time.NewTicker(time.Second * 35)
 	for {
 		select {
 		case <-timerGetLostBlocks.C:
