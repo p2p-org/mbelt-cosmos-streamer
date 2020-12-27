@@ -29,39 +29,33 @@ func (w *Watcher) Init(cfg *config.Config) error {
 }
 
 func (w *Watcher) ListenDB(ctx context.Context) {
-	timerGetLostBlocks := time.NewTicker(time.Second * 15)
-	timerGetAllLostTransactions := time.NewTicker(time.Second * 20)
-	timerGetAllLostBlocks := time.NewTicker(time.Second * 35)
+	timer := time.NewTicker(time.Second * 15)
+
 	for {
 		select {
-		case <-timerGetLostBlocks.C:
+		case <-timer.C:
 			log.Infoln("get GetLostBlocks")
 			heights := w.db.GetLostBlocks()
 			for _, height := range heights {
 				w.Store(height, Block)
 				w.Store(height, Tx)
 			}
-		case <-timerGetAllLostTransactions.C:
 			log.Infoln("get GetAllLostTransactions")
 
-			heights := w.db.GetAllLostTransactions()
+			heights = w.db.GetAllLostTransactions()
 			for _, height := range heights {
 				w.Store(height, Tx)
 			}
-		case <-timerGetAllLostBlocks.C:
 			log.Infoln("get GetAllLostBlocks")
 
-			heights := w.db.GetAllLostBlocks()
+			heights = w.db.GetAllLostBlocks()
 			for _, height := range heights {
 				w.Store(height, Block)
 				w.Store(height, Tx)
 			}
 		case <-ctx.Done():
-			timerGetLostBlocks.Stop()
-			timerGetAllLostTransactions.Stop()
-			timerGetAllLostBlocks.Stop()
+			timer.Stop()
 			break
-
 		}
 	}
 }

@@ -35,17 +35,16 @@ func (w *Watcher) Init(cfg *config.Config) {
 		"How many workers to run for processing")
 
 	viper.SetDefault("worker", 3)
-
-	if cfg.Watcher.Worker != -1 {
-		w.Worker = cfg.Watcher.Worker
-	}
-	log.Infoln("Start watcher with worker: ", w.Worker)
-
 }
 
 func (w *Watcher) Start(config *config.Config) {
 	exitCode := 0
 	defer os.Exit(exitCode)
+
+	if config.Watcher.Worker != -1 {
+		w.Worker = config.Watcher.Worker
+	}
+	log.Infoln("Start watcher with worker: ", w.Worker)
 
 	err := services.InitServices(config)
 	if err != nil {
