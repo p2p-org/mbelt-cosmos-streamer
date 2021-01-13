@@ -90,7 +90,7 @@ func (s *Service) serialize(tx *types.TxResult) map[string]interface{} {
 
 	err = json.Unmarshal([]byte(tx.Result.Log), &logs)
 	if err != nil {
-		log.Errorf("error on marshal logs to json err %v data %v\n", err, tx.Result.Log)
+		log.Errorf("error on marshal logs to json err %v data %v txHeight %d , txIndex %d \n", err, tx.Result.Log, tx.Height, tx.Index)
 		good = false
 	} else {
 		for _, log_info := range logs {
