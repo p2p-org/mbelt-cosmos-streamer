@@ -60,9 +60,13 @@ func (ds *PgDatastore) GetLostBlocks() []int64 {
 		log.Errorln(err)
 
 	} else {
+		defer rows.Close()
 		for rows.Next() {
 			var height int64
-			rows.Scan(&height)
+			if err := rows.Scan(&height); err != nil {
+				log.Errorln(err)
+				continue
+			}
 			heights = append(heights, height)
 		}
 	}
@@ -77,9 +81,13 @@ func (ds *PgDatastore) GetAllLostBlocks() []int64 {
 		log.Errorln(err)
 
 	} else {
+		defer rows.Close()
 		for rows.Next() {
 			var height int64
-			rows.Scan(&height)
+			if err := rows.Scan(&height); err != nil {
+				log.Errorln(err)
+				continue
+			}
 			heights = append(heights, height)
 		}
 	}
@@ -92,11 +100,14 @@ func (ds *PgDatastore) GetAllLostTransactions() []int64 {
 	rows, err := ds.conn.Query(queryGetAllLostTransactions)
 	if err != nil {
 		log.Errorln(err)
-
 	} else {
+		defer rows.Close()
 		for rows.Next() {
 			var height int64
-			rows.Scan(&height)
+			if err := rows.Scan(&height); err != nil {
+				log.Errorln(err)
+				continue
+			}
 			heights = append(heights, height)
 		}
 	}
@@ -112,7 +123,9 @@ func (ds *PgDatastore) GetLastConsistencyBlock() (height int64) {
 
 func (ds *PgDatastore) GetMinBlockHeight() (height int64) {
 	row := ds.conn.QueryRow("select min(height) from cosmos.blocks")
-	row.Scan(&height)
+	if err := row.Scan(&height); err != nil {
+		log.Errorln(err)
+	}
 	return height
 }
 
