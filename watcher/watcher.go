@@ -44,6 +44,7 @@ func (w *Watcher) ListenDB(ctx context.Context) {
 
 			heights = w.db.GetAllLostTransactions()
 			for _, height := range heights {
+				w.Store(height, Block)
 				w.Store(height, Tx)
 			}
 			log.Infoln("get GetAllLostBlocks")
