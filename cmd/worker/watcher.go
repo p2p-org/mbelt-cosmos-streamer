@@ -89,9 +89,10 @@ func (w *Watcher) Start(config *config.Config) {
 	go watcherDB.ListenDB(syncCtx)
 	log.Infoln("start processing functions")
 	for i := 0; i < w.Worker; i++ {
-		wg.Add(2)
+		wg.Add(3)
 		go processingBlock(syncCtx, wg, watcherDB.SubscribeBlock(), api)
-		go processingTx(syncCtx, wg, watcherDB.SubscribeTx(), watcherDB.SubscribeTxHash(), api)
+		go processingTx(syncCtx, wg, watcherDB.SubscribeTx(), api)
+		go processingTxHash(syncCtx, wg, watcherDB.SubscribeTxHash(), api)
 	}
 	<-syncCtx.Done()
 	log.Infoln("mbelt-cosmos-watcher gracefully stopped")
@@ -113,8 +114,7 @@ func processingBlock(ctx context.Context, wg *sync.WaitGroup, heightChan <-chan 
 	}
 }
 
-func processingTx(ctx context.Context, wg *sync.WaitGroup, heightChan <-chan int64, hashesChan <-chan string, api *client.ClientApi) {
-	log.Infoln("start -> processingTx")
+func processingTx(ctx context.Context, wg *sync.WaitGroup, heightChan <-chan int64, api *client.ClientApi) {
 	for {
 		select {
 		case height := <-heightChan:
@@ -129,6 +129,15 @@ func processingTx(ctx context.Context, wg *sync.WaitGroup, heightChan <-chan int
 				log.Infoln("new tx -> ", txResult.Height)
 				services.App().TransactionsService().Push(&txResult)
 			}
+		case <-ctx.Done():
+			wg.Done()
+		}
+	}
+}
+
+func processingTxHash(ctx context.Context, wg *sync.WaitGroup, hashesChan <-chan string, api *client.ClientApi) {
+	for {
+		select {
 		case hash := <-hashesChan:
 			tx := api.GetTxByHash(hash)
 			if tx == nil {
@@ -141,7 +150,7 @@ func processingTx(ctx context.Context, wg *sync.WaitGroup, heightChan <-chan int
 				Tx:     tx.Tx,
 				Result: tx.TxResult,
 			}
-			log.Infoln("new tx hash-> ", txResult.Tx.Hash())
+			log.Infoln("new tx hash-> ", tx.Hash.String())
 			services.App().TransactionsService().Push(&txResult)
 		case <-ctx.Done():
 			wg.Done()

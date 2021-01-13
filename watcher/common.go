@@ -10,6 +10,7 @@ type CacheWatcher struct {
 func (c *CacheWatcher) InitCache() {
 	c.chanHeightsBlocks = make(chan int64, 1000000)
 	c.chanHeightsTxs = make(chan int64, 1000000)
+	c.chanHashTxs = make(chan string, 1000000)
 }
 
 func (c *CacheWatcher) Store(value interface{}, object string) {
