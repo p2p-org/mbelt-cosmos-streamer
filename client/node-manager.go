@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -29,6 +30,7 @@ type Api interface {
 	GetBlock(height int64) *types.Block
 	GetBlockRpc(height int64) *types.Block
 	GetTx(txHash string) *cosmosTypes.StdTx
+	GetTxByHash(txHash string) *ctypes.ResultTx
 	GetTxsRpc(height int64) []*ctypes.ResultTx
 	Stop()
 	ResendBlock(blockHeight uint64)
@@ -124,7 +126,7 @@ func (nm *ClientApi) GetBlockRpc(height int64) *types.Block {
 	return block.Block
 }
 
-func (nm *ClientApi) GetTx(txHash string) *cosmosTypes.StdTx {
+func (nm *ClientApi) GetTx(txHash string) *sdk.TxResponse {
 	url := "http://" + nm.lcdURL + "/txs/" + txHash
 	resp, err := http.Get(url)
 	if err != nil {
@@ -142,9 +144,9 @@ func (nm *ClientApi) GetTx(txHash string) *cosmosTypes.StdTx {
 		log.Errorf("error on unmarshal txResult from json err %v data %v\n", err, body)
 		return nil
 	}
-	newTx := tx.Tx.(cosmosTypes.StdTx)
+	// newTx := tx.Tx.(cosmosTypes.StdTx)
 
-	return &newTx
+	return &tx
 }
 
 func (nm *ClientApi) GetTxsRpc(height int64) []*ctypes.ResultTx {
@@ -153,6 +155,19 @@ func (nm *ClientApi) GetTxsRpc(height int64) []*ctypes.ResultTx {
 		log.Errorln(err)
 	}
 	return txs.Txs
+}
+
+func (nm *ClientApi) GetTxByHash(hash string) *ctypes.ResultTx {
+	byteHash, err := hex.DecodeString(hash)
+	if err != nil {
+		log.Errorln(err)
+		return nil
+	}
+	tx, err := nm.wsClient.Tx(byteHash, true)
+	if err != nil {
+		log.Errorln(err)
+	}
+	return tx
 }
 
 func (nm *ClientApi) ResendBlock(blockHeight uint64) {

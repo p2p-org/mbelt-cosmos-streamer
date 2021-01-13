@@ -4,6 +4,7 @@ type CacheWatcher struct {
 	heights           []int64
 	chanHeightsBlocks chan int64
 	chanHeightsTxs    chan int64
+	chanHashTxs       chan string
 }
 
 func (c *CacheWatcher) InitCache() {
@@ -11,12 +12,14 @@ func (c *CacheWatcher) InitCache() {
 	c.chanHeightsTxs = make(chan int64, 1000000)
 }
 
-func (c *CacheWatcher) Store(height int64, object string) {
+func (c *CacheWatcher) Store(value interface{}, object string) {
 	switch object {
 	case Tx:
-		c.chanHeightsTxs <- height
+		c.chanHeightsTxs <- value.(int64)
 	case Block:
-		c.chanHeightsBlocks <- height
+		c.chanHeightsBlocks <- value.(int64)
+	case TxHash:
+		c.chanHashTxs <- value.(string)
 	}
 }
 
@@ -26,4 +29,8 @@ func (c *CacheWatcher) SubscribeBlock() <-chan int64 {
 
 func (c *CacheWatcher) SubscribeTx() <-chan int64 {
 	return c.chanHeightsTxs
+}
+
+func (c *CacheWatcher) SubscribeTxHash() <-chan string {
+	return c.chanHashTxs
 }

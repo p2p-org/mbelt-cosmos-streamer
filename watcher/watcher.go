@@ -10,6 +10,7 @@ import (
 )
 
 const Tx = "tx"
+const TxHash = "txHash"
 const Block = "block"
 
 type Watcher struct {
@@ -40,20 +41,12 @@ func (w *Watcher) ListenDB(ctx context.Context) {
 				w.Store(height, Block)
 				w.Store(height, Tx)
 			}
+			log.Infoln("get GetAllLostTxsHashes")
+			w.GetAllLostTxsHashes()
 			log.Infoln("get GetAllLostTransactions")
-
-			heights = w.db.GetAllLostTransactions()
-			for _, height := range heights {
-				w.Store(height, Block)
-				w.Store(height, Tx)
-			}
+			w.GetAllLostTxs()
 			log.Infoln("get GetAllLostBlocks")
-
-			heights = w.db.GetAllLostBlocks()
-			for _, height := range heights {
-				w.Store(height, Block)
-				w.Store(height, Tx)
-			}
+			w.GetAllLostBlocks()
 		case <-ctx.Done():
 			timer.Stop()
 			break
@@ -69,8 +62,15 @@ func (w *Watcher) GetAllLostBlocks() {
 }
 
 func (w *Watcher) GetAllLostTxs() {
-	heights := w.db.GetAllLostBlocks()
+	heights := w.db.GetAllLostTransactions()
 	for _, height := range heights {
 		w.Store(height, Tx)
+	}
+}
+
+func (w *Watcher) GetAllLostTxsHashes() {
+	hashes := w.db.GetAllLostTransactionsHashes()
+	for _, hash := range hashes {
+		w.Store(hash, TxHash)
 	}
 }
