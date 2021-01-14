@@ -126,12 +126,12 @@ BEGIN
             NEW."block_height",
             NEW."tx_index",
             NEW."count_messages",
-            NEW."logs",
+            NEW."logs"::text,
             NEW."events"::jsonb,
             NEW."msgs"::jsonb,
             NEW."fee"::jsonb,
             NEW."signatures"::jsonb,
-            NEW."memo",
+            NEW."memo"::text,
             NEW."status"::status_enum,
             NEW."external_info"::jsonb)
     ON CONFLICT DO NOTHING;

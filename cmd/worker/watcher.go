@@ -86,6 +86,10 @@ func (w *Watcher) Start(config *config.Config) {
 	if config.Watcher.StartHeight != -1 {
 		watcherDB.Store(config.Watcher.StartHeight, watcher.Block)
 	}
+	tx := api.GetTx("3303D21B43CC7F18BF174884BB1B9FFF046F7CBC3A083582A8997590F53AD8B7")
+	log.Infoln(tx)
+	os.Exit(1)
+
 	go watcherDB.ListenDB(syncCtx)
 	log.Infoln("start processing functions")
 	for i := 0; i < w.Worker; i++ {
