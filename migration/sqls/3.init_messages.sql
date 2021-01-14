@@ -80,7 +80,7 @@ BEGIN
             NEW."msg_index",
             NEW."msg_type",
             NEW."msg_info"::jsonb,
-            NEW."logs",
+            NEW."logs"::text,
             NEW."events"::jsonb,
             NEW."external_info"::jsonb)
     ON CONFLICT DO NOTHING;
