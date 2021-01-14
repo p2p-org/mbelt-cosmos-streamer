@@ -14,7 +14,6 @@ import (
 	"github.com/prometheus/common/log"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"github.com/tendermint/tendermint/types"
 )
 
 type Watcher struct {
@@ -86,9 +85,6 @@ func (w *Watcher) Start(config *config.Config) {
 	if config.Watcher.StartHeight != -1 {
 		watcherDB.Store(config.Watcher.StartHeight, watcher.Block)
 	}
-	tx := api.GetTx("3303D21B43CC7F18BF174884BB1B9FFF046F7CBC3A083582A8997590F53AD8B7")
-	log.Infoln(tx)
-	os.Exit(1)
 
 	go watcherDB.ListenDB(syncCtx)
 	log.Infoln("start processing functions")
@@ -124,14 +120,8 @@ func processingTx(ctx context.Context, wg *sync.WaitGroup, heightChan <-chan int
 		case height := <-heightChan:
 			txs := api.GetTxsRpc(height)
 			for _, tx := range txs {
-				txResult := types.TxResult{
-					Height: tx.Height,
-					Index:  tx.Index,
-					Tx:     tx.Tx,
-					Result: tx.TxResult,
-				}
-				log.Infoln("new tx -> ", txResult.Height)
-				services.App().TransactionsService().Push(&txResult)
+				log.Infoln("new tx -> ", tx.Height)
+				services.App().TransactionsService().Push(tx)
 			}
 		case <-ctx.Done():
 			wg.Done()
@@ -147,15 +137,8 @@ func processingTxHash(ctx context.Context, wg *sync.WaitGroup, hashesChan <-chan
 			if tx == nil {
 				continue
 			}
-
-			txResult := types.TxResult{
-				Height: tx.Height,
-				Index:  tx.Index,
-				Tx:     tx.Tx,
-				Result: tx.TxResult,
-			}
 			log.Infoln("new tx hash-> ", tx.Hash.String())
-			services.App().TransactionsService().Push(&txResult)
+			services.App().TransactionsService().Push(tx)
 		case <-ctx.Done():
 			wg.Done()
 		}

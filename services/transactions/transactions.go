@@ -12,7 +12,7 @@ import (
 	"github.com/p2p-org/mbelt-cosmos-streamer/datastore/pg"
 	"github.com/p2p-org/mbelt-cosmos-streamer/datastore/utils"
 	"github.com/prometheus/common/log"
-	"github.com/tendermint/tendermint/types"
+	ctypes "github.com/tendermint/tendermint/rpc/core/types"
 )
 
 type TempMessage struct {
@@ -41,7 +41,8 @@ func Init(config *config.Config, ds *datastore.KafkaDatastore, pgDs *pg.PgDatast
 	}, nil
 }
 
-func (s *Service) Push(tx *types.TxResult) {
+func (s *Service) Push(tx *ctypes.ResultTx) {
+
 	defer func() {
 		if r := recover(); r != nil {
 			log.Fatalln("[TransactionsService][Recover]", "Throw panic", r)
@@ -65,7 +66,7 @@ func (s *Service) Push(tx *types.TxResult) {
 	s.ds.Push(datastore.TopicMessages, msgsPush)
 }
 
-func (s *Service) serialize(tx *types.TxResult) map[string]interface{} {
+func (s *Service) serialize(tx *ctypes.ResultTx) map[string]interface{} {
 	var txResult cosmosTypes.StdTx
 	err := cdc.UnmarshalBinaryLengthPrefixed([]byte(tx.Tx), &txResult)
 
@@ -87,10 +88,9 @@ func (s *Service) serialize(tx *types.TxResult) map[string]interface{} {
 	messages := []map[string]interface{}{}
 	messagesForPush := []map[string]interface{}{}
 	var good bool = true
-
-	err = json.Unmarshal([]byte(tx.Result.Log), &logs)
+	err = json.Unmarshal([]byte(tx.TxResult.Log), &logs)
 	if err != nil {
-		log.Errorf("error on marshal logs to json err %v data %v txHeight %d , txIndex %d \n", err, tx.Result.Log, tx.Height, tx.Index)
+		log.Errorf("error on marshal logs to json err %v data %v txHeight %d , txIndex %d \n", err, tx.TxResult.Log, tx.Height, tx.Index)
 		good = false
 	} else {
 		for _, log_info := range logs {
@@ -127,7 +127,7 @@ func (s *Service) serialize(tx *types.TxResult) map[string]interface{} {
 				"msg_info":      tempMessage.Msg,
 				"logs":          log_info.Log,
 				"events":        string(events),
-				"external_info": utils.ToVarcharArray([]string{}),
+				"external_info": tx.TxResult.Info,
 			}
 			messagesForPush = append(messagesForPush, messageForPush)
 
@@ -140,6 +140,10 @@ func (s *Service) serialize(tx *types.TxResult) map[string]interface{} {
 			messages = append(messages, message)
 		}
 	}
+	eventsData, err := json.Marshal(tx.TxResult.Events)
+	if err != nil {
+		log.Errorln("Events not marshaling", err)
+	}
 
 	result := map[string]interface{}{
 		"tx_hash":        fmt.Sprintf("%X", tx.Tx.Hash()),
@@ -148,11 +152,11 @@ func (s *Service) serialize(tx *types.TxResult) map[string]interface{} {
 		"tx_index":       tx.Index,
 		"count_messages": len(messages),
 		"logs":           logs,
-		"events":         utils.ToVarcharArray([]string{}),
+		"events":         string(eventsData),
 		"msgs":           messages,
 		"fee": map[string]interface{}{
-			"gas_wanted": fmt.Sprintf("%d", tx.Result.GasWanted),
-			"gas_used":   fmt.Sprintf("%d", tx.Result.GasUsed),
+			"gas_wanted": fmt.Sprintf("%d", tx.TxResult.GasWanted),
+			"gas_used":   fmt.Sprintf("%d", tx.TxResult.GasUsed),
 			"gas_amount": txResult.Fee.Amount.String(),
 		},
 		"signatures":        string(signatures),

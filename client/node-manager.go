@@ -94,28 +94,6 @@ func (nm *ClientApi) Stop() {
 	nm.wsClient.Stop()
 }
 
-func (nm *ClientApi) GetBlock(height int64) *types.Block {
-	url := "http://" + nm.lcdURL + "/blocks/" + strconv.FormatInt(height, 10)
-	resp, err := http.Get(url)
-	if err != nil {
-		log.Errorf("ResendBlock got responce error: %v", err)
-		return nil
-	}
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		log.Errorf("ResendBlock problem in decode responce to byte array. error: %v", err)
-		return nil
-	}
-	var block ctypes.ResultBlock
-	err = cdc.UnmarshalJSON(body, &block)
-	if err != nil {
-		log.Errorf("ResendBlock problem in unmarshal to resultBlock. error: %v", err)
-		return nil
-	}
-
-	return block.Block
-}
-
 func (nm *ClientApi) GetBlockRpc(height int64) *types.Block {
 	block, err := nm.wsClient.Block(&height)
 	if err != nil {
@@ -124,29 +102,6 @@ func (nm *ClientApi) GetBlockRpc(height int64) *types.Block {
 	}
 
 	return block.Block
-}
-
-func (nm *ClientApi) GetTx(txHash string) *sdk.TxResponse {
-	url := "http://" + nm.lcdURL + "/txs/" + txHash
-	resp, err := http.Get(url)
-	if err != nil {
-		log.Errorf("Error: %v", err)
-		return nil
-	}
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		log.Errorf("Error: %v", err)
-		return nil
-	}
-	var tx sdk.TxResponse
-	err = cdc.UnmarshalJSON(body, &tx)
-	if err != nil {
-		log.Errorf("error on unmarshal txResult from json err %v data %v\n", err, body)
-		return nil
-	}
-	// newTx := tx.Tx.(cosmosTypes.StdTx)
-
-	return &tx
 }
 
 func (nm *ClientApi) GetTxsRpc(height int64) []*ctypes.ResultTx {

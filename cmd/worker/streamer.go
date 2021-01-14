@@ -12,6 +12,7 @@ import (
 	"github.com/p2p-org/mbelt-cosmos-streamer/services"
 	"github.com/prometheus/common/log"
 	"github.com/spf13/cobra"
+	ctypes "github.com/tendermint/tendermint/rpc/core/types"
 	"github.com/tendermint/tendermint/types"
 )
 
@@ -80,7 +81,16 @@ func (s *Streamer) Start(config *config.Config) {
 	go func() {
 		for tx := range api.SubscribeTxs(syncCtx) {
 			log.Infoln("tx new -> ", fmt.Sprintf("%X %d", tx.Data.(types.EventDataTx).Tx.Hash(), tx.Data.(types.EventDataTx).Height))
-			newTx := tx.Data.(types.EventDataTx).TxResult
+			txReform := tx.Data.(types.EventDataTx)
+
+			newTx := ctypes.ResultTx{
+				Hash:     txReform.Tx.Hash(),
+				Height:   txReform.Height,
+				Index:    txReform.Index,
+				TxResult: txReform.Result,
+				Tx:       txReform.Tx,
+				Proof:    types.TxProof{},
+			}
 			go services.App().TransactionsService().Push(&newTx)
 		}
 	}()
