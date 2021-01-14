@@ -84,8 +84,8 @@ func (s *Service) serialize(tx *types.TxResult) map[string]interface{} {
 		Log      string      `json:"log"`
 		Events   interface{} `json:"events"`
 	}
-	var messages []map[string]interface{}
-	var messagesForPush []map[string]interface{}
+	messages := []map[string]interface{}{}
+	messagesForPush := []map[string]interface{}{}
 	var good bool = true
 
 	err = json.Unmarshal([]byte(tx.Result.Log), &logs)
