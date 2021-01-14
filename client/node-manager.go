@@ -108,6 +108,7 @@ func (nm *ClientApi) GetTxsRpc(height int64) []*ctypes.ResultTx {
 	txs, err := nm.wsClient.TxSearch(fmt.Sprintf("tx.height=%d", height), true, 1, 1000)
 	if err != nil {
 		log.Errorln(err)
+		return []*ctypes.ResultTx{}
 	}
 	return txs.Txs
 }

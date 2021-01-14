@@ -87,10 +87,11 @@ func (s *Service) serialize(tx *ctypes.ResultTx) map[string]interface{} {
 	}
 	messages := []map[string]interface{}{}
 	messagesForPush := []map[string]interface{}{}
+
 	var good bool = true
 	err = json.Unmarshal([]byte(tx.TxResult.Log), &logs)
 	if err != nil {
-		log.Errorf("error on marshal logs to json err %v data %v txHeight %d , txIndex %d \n", err, tx.TxResult.Log, tx.Height, tx.Index)
+		log.Errorf("error on marshal tx %s logs to json err %v txHeight %d , txIndex %d \n", err, tx.Hash.String(), tx.Height, tx.Index)
 		good = false
 	} else {
 		for _, log_info := range logs {
@@ -151,7 +152,7 @@ func (s *Service) serialize(tx *ctypes.ResultTx) map[string]interface{} {
 		"block_height":   tx.Height,
 		"tx_index":       tx.Index,
 		"count_messages": len(messages),
-		"logs":           logs,
+		"logs":           tx.TxResult.Log,
 		"events":         string(eventsData),
 		"msgs":           messages,
 		"fee": map[string]interface{}{
