@@ -127,7 +127,7 @@ func (s *Service) serialize(tx *ctypes.ResultTx) map[string]interface{} {
 				"msg_info":      tempMessage.Msg,
 				"logs":          log_info.Log,
 				"events":        string(events),
-				"external_info": tx.TxResult.Info,
+				"external_info": utils.ToVarcharArray([]string{}),
 			}
 			messagesForPush = append(messagesForPush, messageForPush)
 
