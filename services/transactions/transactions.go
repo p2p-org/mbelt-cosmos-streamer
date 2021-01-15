@@ -3,6 +3,8 @@ package transactions
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
+	"strings"
 
 	cosmosTypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	"github.com/cosmos/gaia/app"
@@ -161,7 +163,7 @@ func (s *Service) serialize(tx *ctypes.ResultTx) map[string]interface{} {
 			"gas_amount": txResult.Fee.Amount.String(),
 		},
 		"signatures":        string(signatures),
-		"memo":              txResult.GetMemo(),
+		"memo":              strconv.Quote(strings.ReplaceAll(txResult.GetMemo(), "'", "`")),
 		"status":            client.PendingStatus,
 		"external_info":     utils.ToVarcharArray([]string{}),
 		"messages_for_push": messagesForPush,
