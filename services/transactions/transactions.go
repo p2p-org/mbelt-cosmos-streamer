@@ -4,14 +4,14 @@ import (
 	"encoding/json"
 	"fmt"
 
-	cosmosTypes "github.com/cosmos/cosmos-sdk/x/auth/types"
-	"github.com/cosmos/gaia/app"
+	cosmosTypes "github.com/cosmos/cosmos-sdk/types/tx"
 	"github.com/p2p-org/mbelt-cosmos-streamer/client"
 	"github.com/p2p-org/mbelt-cosmos-streamer/config"
 	"github.com/p2p-org/mbelt-cosmos-streamer/datastore"
 	"github.com/p2p-org/mbelt-cosmos-streamer/datastore/pg"
 	"github.com/p2p-org/mbelt-cosmos-streamer/datastore/utils"
 	"github.com/prometheus/common/log"
+	abci "github.com/tendermint/tendermint/abci/types"
 	ctypes "github.com/tendermint/tendermint/rpc/core/types"
 )
 
@@ -31,8 +31,6 @@ type Service struct {
 	config *config.Config
 	ds     *datastore.KafkaDatastore
 }
-
-var cdc = app.MakeCodec()
 
 func Init(config *config.Config, ds *datastore.KafkaDatastore, pgDs *pg.PgDatastore) (*Service, error) {
 	return &Service{
@@ -62,21 +60,26 @@ func (s *Service) Push(tx *ctypes.ResultTx) {
 		msgsPush[key] = msg
 	}
 
-	s.ds.Push(datastore.TopicTransactions, txPush)
-	s.ds.Push(datastore.TopicMessages, msgsPush)
+	if err := s.ds.Push(datastore.TopicTransactions, txPush); err != nil {
+		log.Warnln(err)
+	}
+	if err := s.ds.Push(datastore.TopicMessages, msgsPush); err != nil {
+		log.Warnln(err)
+	}
 }
 
 func (s *Service) serialize(tx *ctypes.ResultTx) map[string]interface{} {
-	var txResult cosmosTypes.StdTx
+	var txResult cosmosTypes.Tx
 	err := cdc.UnmarshalBinaryLengthPrefixed([]byte(tx.Tx), &txResult)
 
+	err := json.Unmarshal(tx.Tx, &txResult)
 	if err != nil {
-		log.Errorf("error parse Tx err: %v,  Txresult: %v", err, txResult)
+		log.Errorf("error on unmarshal tx to json err %v data\n", err)
 	}
 
 	signatures, err := json.Marshal(txResult.Signatures)
 	if err != nil {
-		log.Errorf("error on marshal signature to json err %v data %v\n", err, txResult.Fee)
+		log.Errorf("error on marshal signature to json err %v data \n", err)
 	}
 
 	var logs []struct {
@@ -101,31 +104,28 @@ func (s *Service) serialize(tx *ctypes.ResultTx) map[string]interface{} {
 			if !log_info.Success {
 				good = false
 			}
-			var tempMessage TempMessage
+			msg := txResult.Body.Messages[log_info.MsgIndex]
+			// msg, err := cdc.MarshalJSON(tx.Result[log_info.MsgIndex])
+			// if err != nil {
+			// 	log.Errorf("err on marshal msg to JSON  err : %v\n\n", err)
+			// }
 
-			msg, err := cdc.MarshalJSON(txResult.Msgs[log_info.MsgIndex])
-			if err != nil {
-				log.Errorf("err on marshal msg to JSON  err : %v\n\n", err)
+			var msgValue map[string]interface{}
+			if err := json.Unmarshal(msg.Value, &msgValue); err != nil {
+				log.Errorf("err on Unmarshal to JSON messageValue err : %v, data:%v\n\n", err, string(msg.Value))
 			}
-			err = json.Unmarshal(msg, &tempMessage)
-			if err != nil {
-				log.Errorf("err on Unmarshal from JSON  err : %v, data:%v\n\n", err, string(msg))
-			}
-			msgValue, err := json.Marshal(tempMessage.Msg)
-			if err != nil {
-				log.Errorf("err on Marshal to JSON messageValue err : %v, data:%v\n\n", err, string(msg))
-			}
+
 			events, err := json.Marshal(log_info.Events)
 			if err != nil {
 				log.Errorf("err on marshal event to JSON  err : %v\n\n", err)
 			}
 			messageForPush := map[string]interface{}{
 				"block_height":  tx.Height,
-				"tx_hash":       fmt.Sprintf("%X", tx.Tx.Hash()),
+				"tx_hash":       fmt.Sprintf("%X", tx.Index),
 				"tx_index":      tx.Index,
 				"msg_index":     log_info.MsgIndex,
-				"msg_type":      tempMessage.MsgType,
-				"msg_info":      tempMessage.Msg,
+				"msg_type":      msg.TypeUrl,
+				"msg_info":      msgValue,
 				"logs":          log_info.Log,
 				"events":        string(events),
 				"external_info": utils.ToVarcharArray([]string{}),
@@ -133,8 +133,8 @@ func (s *Service) serialize(tx *ctypes.ResultTx) map[string]interface{} {
 			messagesForPush = append(messagesForPush, messageForPush)
 
 			message := map[string]interface{}{
-				"type":   tempMessage.MsgType,
-				"value":  string(msgValue),
+				"type":   msg.TypeUrl,
+				"value":  string(msg.Value),
 				"events": string(events),
 				"log":    log_info.Log,
 			}
@@ -147,7 +147,7 @@ func (s *Service) serialize(tx *ctypes.ResultTx) map[string]interface{} {
 	}
 
 	result := map[string]interface{}{
-		"tx_hash":        fmt.Sprintf("%X", tx.Tx.Hash()),
+		"tx_hash":        tx.Hash.String(),
 		"chain_id":       s.config.ChainID,
 		"block_height":   tx.Height,
 		"tx_index":       tx.Index,
@@ -161,7 +161,7 @@ func (s *Service) serialize(tx *ctypes.ResultTx) map[string]interface{} {
 			"gas_amount": txResult.Fee.Amount.String(),
 		},
 		"signatures":        string(signatures),
-		"memo":              txResult.GetMemo(),
+		"memo":              txResult.Body.Memo,
 		"status":            client.PendingStatus,
 		"external_info":     utils.ToVarcharArray([]string{}),
 		"messages_for_push": messagesForPush,

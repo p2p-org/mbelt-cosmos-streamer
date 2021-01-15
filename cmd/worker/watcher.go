@@ -63,7 +63,7 @@ func (w *Watcher) Start(config *config.Config) {
 		log.Fatalln(err)
 	}
 
-	if err = api.Connect(); err != nil {
+	if err = api.ConnectGrpc(); err != nil {
 		log.Fatalln(err)
 	}
 	wg := &sync.WaitGroup{}
@@ -82,48 +82,49 @@ func (w *Watcher) Start(config *config.Config) {
 		wg.Wait()
 		api.Stop()
 	}()
+
 	if config.Watcher.StartHeight != -1 {
 		watcherDB.Store(config.Watcher.StartHeight, watcher.Block)
 	}
-
 	go watcherDB.ListenDB(syncCtx)
 	log.Infoln("start processing functions")
 	for i := 0; i < w.Worker; i++ {
 		wg.Add(2)
-		go processingBlock(syncCtx, wg, watcherDB.SubscribeBlock(), api)
+		// go processingBlock(syncCtx, wg, watcherDB.SubscribeBlock(), api)
 		go processingTx(syncCtx, wg, watcherDB.SubscribeTx(), watcherDB.SubscribeTxHash(), api)
 	}
 	<-syncCtx.Done()
 	log.Infoln("mbelt-cosmos-watcher gracefully stopped")
 }
 
-func processingBlock(ctx context.Context, wg *sync.WaitGroup, heightChan <-chan int64, api *client.ClientApi) {
-	for {
-		select {
-		case height := <-heightChan:
-			block := api.GetBlockRpc(height)
-			if block == nil {
-				continue
-			}
-			log.Infoln("new block -> ", block.Height)
-			services.App().BlocksService().Push(block)
-		case <-ctx.Done():
-			wg.Done()
-		}
-	}
-}
+//
+// func processingBlock(ctx context.Context, wg *sync.WaitGroup, heightChan <-chan int64, api *client.ClientApi) {
+// 	for {
+// 		select {
+// 		case height := <-heightChan:
+// 			block := api.GetBlockRpc(height)
+// 			if block == nil {
+// 				continue
+// 			}
+// 			log.Infoln("new block -> ", block.Height)
+// 			services.App().BlocksService().Push(block)
+// 		case <-ctx.Done():
+// 			wg.Done()
+// 		}
+// 	}
+// }
 
 func processingTx(ctx context.Context, wg *sync.WaitGroup, heightChan <-chan int64, hashesChan <-chan string, api *client.ClientApi) {
 	for {
 		select {
-		case height := <-heightChan:
-			txs := api.GetTxsRpc(height)
-			for _, tx := range txs {
-				log.Infoln("new tx -> ", tx.Height)
-				services.App().TransactionsService().Push(tx)
-			}
+		// case height := <-heightChan:
+		// 	txs := api.GetTxsRpc(height)
+		// 	for _, tx := range txs {
+		// 		log.Infoln("new tx -> ", tx.Height)
+		// 		services.App().TransactionsService().Push(tx)
+		// 	}
 		case hash := <-hashesChan:
-			tx := api.GetTxByHash(hash)
+			tx := api.GetTx(ctx, hash)
 			if tx == nil {
 				continue
 			}

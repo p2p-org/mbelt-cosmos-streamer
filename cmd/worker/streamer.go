@@ -51,7 +51,7 @@ func (s *Streamer) Start(config *config.Config) {
 		log.Fatalln(err)
 	}
 
-	if err = api.Connect(); err != nil {
+	if err = api.ConnectWs(); err != nil {
 		log.Fatalln(err)
 	}
 
@@ -73,18 +73,16 @@ func (s *Streamer) Start(config *config.Config) {
 		for block := range api.SubscribeBlock(syncCtx) {
 			log.Infoln("Height:", block.Data.(types.EventDataNewBlock).Block.Header.Height)
 			newBlock := block.Data.(types.EventDataNewBlock).Block
-
 			go services.App().BlocksService().Push(newBlock)
 		}
 	}()
 
 	go func() {
 		for tx := range api.SubscribeTxs(syncCtx) {
-			log.Infoln("tx new -> ", fmt.Sprintf("%X %d", tx.Data.(types.EventDataTx).Tx.Hash(), tx.Data.(types.EventDataTx).Height))
+			log.Infoln("tx new -> ", fmt.Sprintf("%X %d", tx.Data.(types.EventDataTx).Height, tx.Data.(types.EventDataTx).Height))
 			txReform := tx.Data.(types.EventDataTx)
-
 			newTx := ctypes.ResultTx{
-				Hash:     txReform.Tx.Hash(),
+				Hash:     []byte(""),
 				Height:   txReform.Height,
 				Index:    txReform.Index,
 				TxResult: txReform.Result,
