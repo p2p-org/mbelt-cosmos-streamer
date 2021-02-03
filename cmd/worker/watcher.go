@@ -63,11 +63,7 @@ func (w *Watcher) Start(config *config.Config) {
 		log.Fatalln(err)
 	}
 
-	if err = api.ConnectGrpc(); err != nil {
-		log.Fatalln(err)
-	}
 	wg := &sync.WaitGroup{}
-
 	go func() {
 		var gracefulStop = make(chan os.Signal)
 		signal.Notify(gracefulStop, syscall.SIGTERM)
@@ -90,29 +86,28 @@ func (w *Watcher) Start(config *config.Config) {
 	log.Infoln("start processing functions")
 	for i := 0; i < w.Worker; i++ {
 		wg.Add(2)
-		// go processingBlock(syncCtx, wg, watcherDB.SubscribeBlock(), api)
+		go processingBlock(syncCtx, wg, watcherDB.SubscribeBlock(), api)
 		go processingTx(syncCtx, wg, watcherDB.SubscribeTx(), watcherDB.SubscribeTxHash(), api)
 	}
 	<-syncCtx.Done()
 	log.Infoln("mbelt-cosmos-watcher gracefully stopped")
 }
 
-//
-// func processingBlock(ctx context.Context, wg *sync.WaitGroup, heightChan <-chan int64, api *client.ClientApi) {
-// 	for {
-// 		select {
-// 		case height := <-heightChan:
-// 			block := api.GetBlockRpc(height)
-// 			if block == nil {
-// 				continue
-// 			}
-// 			log.Infoln("new block -> ", block.Height)
-// 			services.App().BlocksService().Push(block)
-// 		case <-ctx.Done():
-// 			wg.Done()
-// 		}
-// 	}
-// }
+func processingBlock(ctx context.Context, wg *sync.WaitGroup, heightChan <-chan int64, api *client.ClientApi) {
+	for {
+		select {
+		case height := <-heightChan:
+			block := api.GetBlockRpc(ctx, height)
+			if block == nil {
+				continue
+			}
+			log.Infoln("new block -> ", block.Height)
+			services.App().BlocksService().Push(block)
+		case <-ctx.Done():
+			wg.Done()
+		}
+	}
+}
 
 func processingTx(ctx context.Context, wg *sync.WaitGroup, heightChan <-chan int64, hashesChan <-chan string, api *client.ClientApi) {
 	for {
@@ -128,7 +123,7 @@ func processingTx(ctx context.Context, wg *sync.WaitGroup, heightChan <-chan int
 			if tx == nil {
 				continue
 			}
-			log.Infoln("new tx hash-> ", tx.Hash.String())
+			log.Infoln("new tx hash-> ", tx.TxResponse.TxHash)
 			services.App().TransactionsService().Push(tx)
 		case <-ctx.Done():
 			wg.Done()

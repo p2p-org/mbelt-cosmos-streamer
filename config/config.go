@@ -17,4 +17,8 @@ type Config struct {
 		Worker      int   `env:"WATCHER_WORKER" default:"-1"`
 		StartHeight int64 `env:"WATCHER_START_HEIGHT" default:"-1"`
 	}
+
+	Counts struct {
+		CheckBlocksConsistencyPerQuery int64 `env:"COUNT_BLOCKS_CONSISTENCY" default:"500"`
+	}
 }

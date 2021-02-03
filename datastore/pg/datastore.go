@@ -160,6 +160,7 @@ func (ds *PgDatastore) GetBlocksWithCountTxs() []BlocksWithCountTxs {
 		rows.Scan(&item.Height, &item.NumTx, &item.CountTxs)
 		stats = append(stats, item)
 	}
+	rows.Close()
 	return stats
 }
 

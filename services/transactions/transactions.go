@@ -3,17 +3,20 @@ package transactions
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
+	"strings"
 
-	cosmosTypes "github.com/cosmos/cosmos-sdk/types/tx"
+	"github.com/cosmos/cosmos-sdk/types/tx"
+	app "github.com/cosmos/gaia/v3/app"
 	"github.com/p2p-org/mbelt-cosmos-streamer/client"
 	"github.com/p2p-org/mbelt-cosmos-streamer/config"
 	"github.com/p2p-org/mbelt-cosmos-streamer/datastore"
 	"github.com/p2p-org/mbelt-cosmos-streamer/datastore/pg"
 	"github.com/p2p-org/mbelt-cosmos-streamer/datastore/utils"
 	"github.com/prometheus/common/log"
-	abci "github.com/tendermint/tendermint/abci/types"
-	ctypes "github.com/tendermint/tendermint/rpc/core/types"
 )
+
+var cdc, _ = app.MakeCodecs()
 
 type TempMessage struct {
 	MsgType string                 `json:"type"`
@@ -39,24 +42,23 @@ func Init(config *config.Config, ds *datastore.KafkaDatastore, pgDs *pg.PgDatast
 	}, nil
 }
 
-func (s *Service) Push(tx *ctypes.ResultTx) {
-
-	defer func() {
-		if r := recover(); r != nil {
-			log.Fatalln("[TransactionsService][Recover]", "Throw panic", r)
-		}
-	}()
+func (s *Service) Push(txData *tx.GetTxResponse) {
+	// defer func() {
+	// 	if r := recover(); r != nil {
+	// 		log.Fatalln("[TransactionsService][Recover]", "Throw panic", r)
+	// 	}
+	// }()
 	txPush := map[string]interface{}{}
-	txResult := s.serialize(tx)
+	txResult := s.serialize(txData)
 	msgs := txResult["messages_for_push"]
 	delete(txResult, "messages_for_push")
 
-	txPush[fmt.Sprintf("%X", tx.Tx.Hash())] = txResult
+	txPush[fmt.Sprintf("%X", txData.TxResponse.TxHash)] = txResult
 
 	msgsPush := map[string]interface{}{}
 
 	for _, msg := range msgs.([]map[string]interface{}) {
-		key := fmt.Sprintf("%d-%d", msg["tx_index"], msg["msg_index"])
+		key := fmt.Sprintf("%s-%d", txData.TxResponse.TxHash, msg["msg_index"])
 		msgsPush[key] = msg
 	}
 
@@ -68,107 +70,72 @@ func (s *Service) Push(tx *ctypes.ResultTx) {
 	}
 }
 
-func (s *Service) serialize(tx *ctypes.ResultTx) map[string]interface{} {
-	var txResult cosmosTypes.Tx
-	err := cdc.UnmarshalBinaryLengthPrefixed([]byte(tx.Tx), &txResult)
-
-	err := json.Unmarshal(tx.Tx, &txResult)
-	if err != nil {
-		log.Errorf("error on unmarshal tx to json err %v data\n", err)
-	}
-
-	signatures, err := json.Marshal(txResult.Signatures)
+func (s *Service) serialize(txData *tx.GetTxResponse) map[string]interface{} {
+	signatures, err := json.Marshal(txData.Tx.Signatures)
 	if err != nil {
 		log.Errorf("error on marshal signature to json err %v data \n", err)
 	}
 
-	var logs []struct {
-		MsgIndex uint64      `json:"msg_index"`
-		Success  bool        `json:"success"`
-		Log      string      `json:"log"`
-		Events   interface{} `json:"events"`
-	}
 	messages := []map[string]interface{}{}
 	messagesForPush := []map[string]interface{}{}
-
-	var good bool = true
-	err = json.Unmarshal([]byte(tx.TxResult.Log), &logs)
-	if err != nil {
-		log.Errorf("error on marshal tx %s logs to json err %v txHeight %d , txIndex %d \n", err, tx.Hash.String(), tx.Height, tx.Index)
-		good = false
-	} else {
-		for _, log_info := range logs {
-			if &log_info == nil {
-				log.Errorln("struct is nil logInfo")
-			}
-			if !log_info.Success {
-				good = false
-			}
-			msg := txResult.Body.Messages[log_info.MsgIndex]
-			// msg, err := cdc.MarshalJSON(tx.Result[log_info.MsgIndex])
-			// if err != nil {
-			// 	log.Errorf("err on marshal msg to JSON  err : %v\n\n", err)
-			// }
-
-			var msgValue map[string]interface{}
-			if err := json.Unmarshal(msg.Value, &msgValue); err != nil {
-				log.Errorf("err on Unmarshal to JSON messageValue err : %v, data:%v\n\n", err, string(msg.Value))
-			}
-
-			events, err := json.Marshal(log_info.Events)
-			if err != nil {
-				log.Errorf("err on marshal event to JSON  err : %v\n\n", err)
-			}
-			messageForPush := map[string]interface{}{
-				"block_height":  tx.Height,
-				"tx_hash":       fmt.Sprintf("%X", tx.Index),
-				"tx_index":      tx.Index,
-				"msg_index":     log_info.MsgIndex,
-				"msg_type":      msg.TypeUrl,
-				"msg_info":      msgValue,
-				"logs":          log_info.Log,
-				"events":        string(events),
-				"external_info": utils.ToVarcharArray([]string{}),
-			}
-			messagesForPush = append(messagesForPush, messageForPush)
-
-			message := map[string]interface{}{
-				"type":   msg.TypeUrl,
-				"value":  string(msg.Value),
-				"events": string(events),
-				"log":    log_info.Log,
-			}
-			messages = append(messages, message)
+	for _, logInfo := range txData.TxResponse.Logs {
+		if &logInfo == nil {
+			log.Errorln("struct is nil logInfo")
 		}
-	}
-	eventsData, err := json.Marshal(tx.TxResult.Events)
-	if err != nil {
-		log.Errorln("Events not marshaling", err)
+		events := make([]map[string]interface{}, len(logInfo.Events))
+		for _, event := range logInfo.Events {
+			if &event != nil {
+				events = append(events, map[string]interface{}{
+					"type":       event.Type,
+					"attributes": event.Attributes,
+				})
+			}
+		}
+
+		msg := txData.Tx.Body.Messages[logInfo.MsgIndex]
+		msgValue := cdc.MustMarshalJSON(msg)
+		messageForPush := map[string]interface{}{
+			"block_height":  txData.TxResponse.Height,
+			"tx_hash":       txData.TxResponse.TxHash,
+			"tx_index":      0, // TODO add value
+			"msg_index":     logInfo.MsgIndex,
+			"msg_type":      msg.TypeUrl,
+			"msg_info":      string(msgValue),
+			"logs":          logInfo.Log,
+			"events":        events,
+			"external_info": utils.ToVarcharArray([]string{}),
+		}
+		messagesForPush = append(messagesForPush, messageForPush)
+
+		message := map[string]interface{}{
+			"type":   msg.TypeUrl,
+			"value":  string(msgValue),
+			"events": events,
+			"log":    logInfo.Log,
+		}
+		messages = append(messages, message)
 	}
 
 	result := map[string]interface{}{
-		"tx_hash":        tx.Hash.String(),
+		"tx_hash":        txData.TxResponse.TxHash,
 		"chain_id":       s.config.ChainID,
-		"block_height":   tx.Height,
-		"tx_index":       tx.Index,
-		"count_messages": len(messages),
-		"logs":           tx.TxResult.Log,
-		"events":         string(eventsData),
+		"block_height":   txData.TxResponse.Height,
+		"time":           txData.TxResponse.Timestamp,
+		"tx_index":       0, // TODO add tx_index txData.TxResponse.Index,
+		"count_messages": len(txData.Tx.Body.Messages),
+		"logs":           txData.TxResponse.RawLog,
+		"events":         txData.TxResponse.Logs.String(),
 		"msgs":           messages,
 		"fee": map[string]interface{}{
-			"gas_wanted": fmt.Sprintf("%d", tx.TxResult.GasWanted),
-			"gas_used":   fmt.Sprintf("%d", tx.TxResult.GasUsed),
-			"gas_amount": txResult.Fee.Amount.String(),
+			"gas_wanted": fmt.Sprintf("%d", txData.TxResponse.GasWanted),
+			"gas_used":   fmt.Sprintf("%d", txData.TxResponse.GasUsed),
+			"gas_amount": txData.Tx.AuthInfo.Fee.Amount.String(),
 		},
 		"signatures":        string(signatures),
-		"memo":              txResult.Body.Memo,
+		"memo":              strconv.Quote(strings.ReplaceAll(txData.Tx.Body.Memo, "'", "`")),
 		"status":            client.PendingStatus,
 		"external_info":     utils.ToVarcharArray([]string{}),
 		"messages_for_push": messagesForPush,
-	}
-
-	if good && len(logs) == len(messages) {
-		result["status"] = client.ConfirmedStatus
 	}
 
 	return result

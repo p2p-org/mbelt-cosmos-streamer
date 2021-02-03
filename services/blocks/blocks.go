@@ -26,7 +26,6 @@ func Init(config *config.Config, kafkaDs *datastore.KafkaDatastore, pgDs *pg.PgD
 }
 
 func (s *Service) Push(block *types.Block) {
-
 	defer func() {
 		if r := recover(); r != nil {
 			log.Infoln("[BlocksService][Recover]", "Throw panic", r)
