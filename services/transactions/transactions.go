@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/cosmos/cosmos-sdk/types/tx"
 	app "github.com/cosmos/gaia/v3/app"
@@ -115,12 +116,16 @@ func (s *Service) serialize(txData *tx.GetTxResponse) map[string]interface{} {
 		}
 		messages = append(messages, message)
 	}
+	timestamp, err := time.Parse("2006-01-02T15:04:05Z", txData.TxResponse.Timestamp)
+	if err != nil {
+		log.Warnln(err)
+	}
 
 	result := map[string]interface{}{
 		"tx_hash":        txData.TxResponse.TxHash,
 		"chain_id":       s.config.ChainID,
 		"block_height":   txData.TxResponse.Height,
-		"time":           txData.TxResponse.Timestamp,
+		"time":           timestamp.Unix(),
 		"tx_index":       0, // TODO add tx_index txData.TxResponse.Index,
 		"count_messages": len(txData.Tx.Body.Messages),
 		"logs":           txData.TxResponse.RawLog,
