@@ -18,6 +18,7 @@ CREATE STREAM TRANSACTIONS_STREAM (
   "tx_hash" VARCHAR,
   "chain_id" VARCHAR,
    "block_height" BIGINT,
+    "time" BIGINT,
    "tx_index" BIGINT,
    "logs" STRING,
    "events" STRING,

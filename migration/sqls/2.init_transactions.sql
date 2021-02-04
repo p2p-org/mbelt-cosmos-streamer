@@ -25,7 +25,7 @@ CREATE TABLE IF NOT EXISTS cosmos._transactions
     tx_hash        varchar(64) NOT NULL PRIMARY KEY,
     chain_id       varchar(64) NOT NULL,
     block_height   bigint      NOT NULL,
-    time           BIGINT      NOT NULL,
+    time           bigint      NOT NULL,
     tx_index       int,
     count_messages bigint,
     logs           text,
