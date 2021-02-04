@@ -77,8 +77,9 @@ func (s *Service) serialize(txData *tx.GetTxResponse) map[string]interface{} {
 		log.Errorf("error on marshal signature to json err %v data \n", err)
 	}
 
-	messages := []map[string]interface{}{}
-	messagesForPush := []map[string]interface{}{}
+	var messages []map[string]interface{}
+	var messagesForPush []map[string]interface{}
+	var txEvents []map[string]interface{}
 	for _, logInfo := range txData.TxResponse.Logs {
 		if &logInfo == nil {
 			log.Errorln("struct is nil logInfo")
@@ -86,10 +87,13 @@ func (s *Service) serialize(txData *tx.GetTxResponse) map[string]interface{} {
 		events := make([]map[string]interface{}, len(logInfo.Events))
 		for _, event := range logInfo.Events {
 			if &event != nil {
-				events = append(events, map[string]interface{}{
+				eventItem := map[string]interface{}{
 					"type":       event.Type,
 					"attributes": event.Attributes,
-				})
+				}
+				events = append(events, eventItem)
+				txEvents = append(txEvents, eventItem)
+
 			}
 		}
 
@@ -129,7 +133,7 @@ func (s *Service) serialize(txData *tx.GetTxResponse) map[string]interface{} {
 		"tx_index":       0, // TODO add tx_index txData.TxResponse.Index,
 		"count_messages": len(messagesForPush),
 		"logs":           txData.TxResponse.RawLog,
-		"events":         txData.TxResponse.Logs.String(),
+		"events":         txEvents,
 		"msgs":           messages,
 		"fee": map[string]interface{}{
 			"gas_wanted": fmt.Sprintf("%d", txData.TxResponse.GasWanted),
