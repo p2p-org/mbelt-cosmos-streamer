@@ -1,35 +1,9 @@
 #!/bin/bash
 
-DIR_KSQL_INIT_CONFIG='./ksql'
-FILE_KSQL_CONFIG='./ksql_config.json'
-KAFKA_BROKER_HOST="${KAFKA_HOST}:9092"
-KAFKA_REST_PROXY_URL="http://${KAFKA_HOST}:8082"
-KAFKA_CONNECT_URL="http://${KAFKA_HOST}:8083"
-KAFKA_SCHEMA_URL="http://${KAFKA_HOST}:8081"
-KAFKA_KSQL_DB_URL="http://${KAFKA_HOST}:8088"
-DB_CONNECTION_URL="jdbc:${DB_CONNECTION_URL}"
-
-APP_MODE=dev
-APP_NETWORK=cosmos
-
-APP_ID=substrate_streamer
-APP_PREFIX=$(echo "$APP_ID"_"$APP_MODE"_"$APP_NETWORK" | tr '[:lower:]' '[:upper:]')
-
-COLOR_RED=`tput setaf 1`
-COLOR_GREEN=`tput setaf 2`
-COLOR_NONE=`tput sgr0`
-
-# {
-#  "ksql": "",
-#  "streamsProperties": {}
-# }
-
-read -r -d '' KSQL_FILE_TEMPLATE <<-EOM
-{
-  "ksql": {KSQL},
-  "streamsProperties": {}
-}
-EOM
+# Init colors
+COLOR_RED=$(tput setaf 1)
+COLOR_GREEN=$(tput setaf 2)
+COLOR_NONE=$(tput sgr0)
 
 # Check dependencies
 if ! type "docker" >/dev/null; then
@@ -47,13 +21,102 @@ if ! type "jq" >/dev/null; then
   exit 1
 fi
 
-docker-compose -f docker-compose.ksql.yml  -f docker-compose.yml up -d zookeeper broker
-docker-compose -f docker-compose.ksql.yml -f docker-compose.yml up -d --build schema-registry connect control-center \
-  ksqldb-server ksqldb-cli ksql-datagen rest-proxy db
+while getopts f:c: flag
+do
+    case "${flag}" in
+        f) FLAG_ENV_FILE_PATH=${OPTARG};;
+        c) FLAG_COMMAND=${OPTARG};;
+    esac
+done
+
+# Check .env files
+# If not exist, environment variables should be initialized
+
+CONFIG_SCRIPT_ENV_FILE='.cosmos.mbelt.env'
+if [ -z "$FLAG_ENV_FILE_PATH" ]; then
+  if [ ! -s "$CONFIG_SCRIPT_ENV_FILE" ]; then
+    echo "${COLOR_RED}Default .env file not found \"$CONFIG_SCRIPT_ENV_FILE\", use -e flag for define${COLOR_NONE}"
+    exit 1
+  fi
+else
+  if [ ! -s "$FLAG_ENV_FILE_PATH" ]; then
+    echo "${COLOR_RED}Defined .env file not found \"$FLAG_ENV_FILE_PATH\"${COLOR_NONE}"
+    CONFIG_SCRIPT_ENV_FILE=''
+    exit 1
+  fi
+  CONFIG_SCRIPT_ENV_FILE=$FLAG_ENV_FILE_PATH
+fi
+
+# Load .env file
+if [ -n "$1" ]; then
+  set -o allexport
+  eval $(cat "$CONFIG_SCRIPT_ENV_FILE" | sed -e '/^#/d;/^\s*$/d' -e 's/\(\w*\)[ \t]*=[ \t]*\(.*\)/\1=\2/' -e "s/=['\"]\(.*\)['\"]/=\1/g" -e "s/'/'\\\''/g" -e "s/=\(.*\)/='\1'/g")
+  set +o allexport
+  echo "${COLOR_GREEN}Loaded environment variables from .env file \"$1\"${COLOR_NONE}"
+fi
+
+KAFKA_REST_PROXY_URL="http://${KAFKA_HOST}:8082"
+KAFKA_CLUSTER_ID=$(curl -sX GET "$KAFKA_REST_PROXY_URL/v3/clusters" -H "Content-Type: application/json" |  jq -r '.data[0].cluster_id')
+
+if [ -z "$KAFKA_HOST" ]; then
+  echo "${COLOR_RED}KAFKA_HOST is not defined${COLOR_NONE}"
+  exit 1
+fi
+
+if [ -z "$POSTGRES_HOST" ]; then
+  echo "${COLOR_RED}POSTGRES_HOST is not defined${COLOR_NONE}"
+  exit 1
+fi
+
+if [ -z "$POSTGRES_DB" ]; then
+  echo "${COLOR_RED}POSTGRES_DB is not defined${COLOR_NONE}"
+  exit 1
+fi
+
+if [ -z "$POSTGRES_PASSWORD" ]; then
+  echo "${COLOR_RED}POSTGRES_PASSWORD is not defined${COLOR_NONE}"
+  exit 1
+fi
+
+
+DIR_KSQL_INIT_CONFIG='./ksql'
+FILE_KSQL_CONFIG='./ksql_config.json'
+KAFKA_REST_PROXY_URL="http://${KAFKA_HOST}:8082"
+KAFKA_CONNECT_URL="http://${KAFKA_HOST}:8083"
+KAFKA_SCHEMA_URL="http://${KAFKA_HOST}:8081"
+KAFKA_KSQL_DB_URL="http://${KAFKA_HOST}:8088"
+
+APP_MODE=dev
+APP_NETWORK=cosmos3
+
+APP_ID=cosmos_streamer
+APP_PREFIX=$(echo "$APP_ID"_"$APP_MODE"_"$APP_NETWORK" | tr '[:lower:]' '[:upper:]')
+
+if [ -z "$POSTGRES_PORT" ]; then
+  echo "POSTGRES_PORT is not defined, using default value \"5432\""
+  POSTGRES_PORT=5432
+fi
+
+if [ -z "$POSTGRES_USER" ]; then
+  echo "POSTGRES_USER is not defined, using default value \"postgres\""
+  POSTGRES_USER='posgres'
+fi
+
+DATASTORE_JDBC_CONNECTION_URL="jdbc:postgresql://${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}?user=${POSTGRES_USER}&password=${POSTGRES_PASSWORD}"
+
+# {
+#  "ksql": "",
+#  "streamsProperties": {}
+# }
+
+read -r -d '' KSQL_FILE_TEMPLATE <<-EOM
+{
+  "ksql": {KSQL},
+  "streamsProperties": {}
+}
+EOM
 
 echo "${COLOR_GREEN}Starting ksql containers...${COLOR_NONE}"
-sleep 4m # we should wait a little bit
-
 
 KAFKA_API_ATTEMPT_COUNTER=0
 KAFKA_API_ATTEMPTS=600
@@ -61,7 +124,7 @@ KAFKA_API_ATTEMPTS=600
 echo "Waiting for kafka broker..."
 
 while [[ "$(curl -sX GET "$KAFKA_REST_PROXY_URL/brokers" \
-  -H "Content-Type: application/vnd.kafka.v2+json" | jq -r '.brokers[0]')" = null ]]; do
+  -H "Content-Type: application/json" | jq -r '.brokers[0]')" = null ]]; do
     if [ ${KAFKA_API_ATTEMPTS} -eq ${KAFKA_API_ATTEMPT_COUNTER} ];then
       echo "${COLOR_RED}Cannot connect to Kafka API instance. Max attempts reached${COLOR_NONE}"
       exit 1
@@ -87,17 +150,20 @@ fi
 
 for kafka_topic in $(jq -r '.topics[].name' <<<"$KSQL_CONFIG"); do
   kafka_topic="$APP_PREFIX"_"$kafka_topic"
-  if [[ $(curl -sX GET "$KAFKA_REST_PROXY_URL/topics" \
-    -H "Content-Type: application/vnd.kafka.v2+json" | jq -r '. | index("'"$kafka_topic"'")') == null ]]; then
-    echo "Creating topic \"$kafka_topic\""
-    docker-compose -f docker-compose.ksql.yml exec broker kafka-topics --create --bootstrap-server "$KAFKA_BROKER_HOST" \
-      --replication-factor 1 \
-      --partitions 1 \
-      --topic "$kafka_topic"
-  else
-    echo "Topic \"$kafka_topic\" already exists"
-  fi
+    if [[ $(curl -sX GET "$KAFKA_REST_PROXY_URL/v3/clusters/$KAFKA_CLUSTER_ID/topics" \
+      -H "Content-Type: application/json" | \
+      jq -r ". | select( any(.data[]; .topic_name == \"$kafka_topic\"))") ]]; then
+      echo "Topic \"$kafka_topic\" already exists"
+    else
+      KAFKA_REST_RESP_MESSAGE=$(curl -sX POST "$KAFKA_REST_PROXY_URL/v3/clusters/$KAFKA_CLUSTER_ID/topics" \
+        -H "Content-Type: application/json" \
+        --data "{\"topic_name\": \"$kafka_topic\", \"partitions_count\": 1, \"replication_factor\": 1, \"configs\": [{\"name\": \"cleanup.policy\",\"value\": \"compact\"}, {\"name\": \"retention.ms\",\"value\": \"172800000\"}]}" | \
+        jq '.message')
 
+        if [[ "$KAFKA_REST_RESP_MESSAGE" != null ]]; then
+          echo "${COLOR_RED}$KAFKA_REST_RESP_MESSAGE${COLOR_NONE}"
+        fi
+    fi
 done
 
 KSQL_ATTEMPT_COUNTER=0
@@ -203,7 +269,7 @@ for kafka_connector in $(jq -c '.connectors[]' <<<"$KSQL_CONFIG"); do
   KAFKA_CONNECTOR_CONFIG=$(echo "$KAFKA_FILE_CONNECTOR_TEMPLATE" "$kafka_connector" | jq -s '.[0] * .[1]')
 
   # Fill up variables
-  KAFKA_CONNECTOR_CONFIG=$(echo "$KAFKA_CONNECTOR_CONFIG" | jq --arg DB_CONNECTION_URL "$DB_CONNECTION_URL" '.config["connection.url"] = $DB_CONNECTION_URL')
+  KAFKA_CONNECTOR_CONFIG=$(echo "$KAFKA_CONNECTOR_CONFIG" | jq --arg DATASTORE_JDBC_CONNECTION_URL "$DATASTORE_JDBC_CONNECTION_URL" '.config["connection.url"] = $DATASTORE_JDBC_CONNECTION_URL')
   KAFKA_CONNECTOR_CONFIG=$(echo "$KAFKA_CONNECTOR_CONFIG" | jq --arg KAFKA_SCHEMA_URL "$KAFKA_SCHEMA_URL" '.config["value.converter.schema.registry.url"] = $KAFKA_SCHEMA_URL')
 
 
