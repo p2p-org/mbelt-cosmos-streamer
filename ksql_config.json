@@ -34,7 +34,7 @@
       }
     },
     {
-      "name": "{APP_PREFIX}_blocks_stream_avro_sink",
+      "name": "{APP_PREFIX}_transactions_stream_avro_sink",
       "config": {
         "topics": "{APP_PREFIX}_TRANSACTIONS_STREAM",
         "errors.tolerance": "all",
