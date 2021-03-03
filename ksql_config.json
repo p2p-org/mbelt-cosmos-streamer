@@ -1,0 +1,48 @@
+{
+  "topics": [
+    {
+      "name": "BLOCKS_STREAM"
+    },
+    {
+      "name": "TRANSACTIONS_STREAM"
+    },
+    {
+      "name": "MESSAGES_STREAM"
+    }
+  ],
+  "connectors": [
+    {
+      "name": "{APP_PREFIX}_blocks_stream_avro_sink",
+      "config": {
+        "topics": "{APP_PREFIX}_BLOCKS_STREAM",
+        "errors.tolerance": "all",
+        "insert.mode": "INSERT",
+        "table.name.format": "cosmos._blocks",
+        "pk.mode": "record_value",
+        "pk.fields": "hash"
+      }
+    },
+    {
+      "name": "{APP_PREFIX}_messages_stream_avro_sink",
+      "config": {
+        "topics": "{APP_PREFIX}_MESSAGES_STREAM",
+        "errors.tolerance": "all",
+        "insert.mode": "INSERT",
+        "table.name.format": "cosmos._messages",
+        "pk.mode": "none",
+        "pk.fields": ""
+      }
+    },
+    {
+      "name": "{APP_PREFIX}_transactions_stream_avro_sink",
+      "config": {
+        "topics": "{APP_PREFIX}_TRANSACTIONS_STREAM",
+        "errors.tolerance": "all",
+        "insert.mode": "INSERT",
+        "table.name.format": "cosmos._transactions",
+        "pk.mode": "record_value",
+        "pk.fields": "tx_hash"
+      }
+    }
+  ]
+}

@@ -63,11 +63,7 @@ func (w *Watcher) Start(config *config.Config) {
 		log.Fatalln(err)
 	}
 
-	if err = api.Connect(); err != nil {
-		log.Fatalln(err)
-	}
 	wg := &sync.WaitGroup{}
-
 	go func() {
 		var gracefulStop = make(chan os.Signal)
 		signal.Notify(gracefulStop, syscall.SIGTERM)
@@ -82,10 +78,10 @@ func (w *Watcher) Start(config *config.Config) {
 		wg.Wait()
 		api.Stop()
 	}()
+
 	if config.Watcher.StartHeight != -1 {
 		watcherDB.Store(config.Watcher.StartHeight, watcher.Block)
 	}
-
 	go watcherDB.ListenDB(syncCtx)
 	log.Infoln("start processing functions")
 	for i := 0; i < w.Worker; i++ {
@@ -101,7 +97,7 @@ func processingBlock(ctx context.Context, wg *sync.WaitGroup, heightChan <-chan 
 	for {
 		select {
 		case height := <-heightChan:
-			block := api.GetBlockRpc(height)
+			block := api.GetBlockRpc(ctx, height)
 			if block == nil {
 				continue
 			}
@@ -116,18 +112,18 @@ func processingBlock(ctx context.Context, wg *sync.WaitGroup, heightChan <-chan 
 func processingTx(ctx context.Context, wg *sync.WaitGroup, heightChan <-chan int64, hashesChan <-chan string, api *client.ClientApi) {
 	for {
 		select {
-		case height := <-heightChan:
-			txs := api.GetTxsRpc(height)
-			for _, tx := range txs {
-				log.Infoln("new tx -> ", tx.Height)
-				services.App().TransactionsService().Push(tx)
-			}
+		// case height := <-heightChan:
+		// 	txs := api.GetTxsRpc(height)
+		// 	for _, tx := range txs {
+		// 		log.Infoln("new tx -> ", tx.Height)
+		// 		services.App().TransactionsService().Push(tx)
+		// 	}
 		case hash := <-hashesChan:
-			tx := api.GetTxByHash(hash)
+			tx := api.GetTx(ctx, hash)
 			if tx == nil {
 				continue
 			}
-			log.Infoln("new tx hash-> ", tx.Hash.String())
+			log.Infoln("new tx hash-> ", tx.TxResponse.TxHash)
 			services.App().TransactionsService().Push(tx)
 		case <-ctx.Done():
 			wg.Done()

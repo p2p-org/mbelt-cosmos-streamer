@@ -1,0 +1,15 @@
+CREATE STREAM {APP_PREFIX}_BLOCKS_STREAM (
+    "hash" VARCHAR,
+  "chain_id" VARCHAR,
+  "height" BIGINT,
+  "time" BIGINT,
+  "num_tx" BIGINT,
+  "total_txs" BIGINT,
+  "last_block_hash" VARCHAR,
+  "validator" VARCHAR,
+  "txs_hash" STRING,
+  "status" VARCHAR
+) WITH (kafka_topic='{APP_PREFIX}_BLOCKS_STREAM', value_format='JSON');
+
+CREATE STREAM {APP_PREFIX}_BLOCKS_STREAM_AVRO WITH(PARTITIONS=1, VALUE_FORMAT='AVRO', REPLICAS=1) AS
+SELECT * FROM {APP_PREFIX}_BLOCKS_STREAM EMIT CHANGES;

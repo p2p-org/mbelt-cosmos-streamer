@@ -1,25 +1,20 @@
 module github.com/p2p-org/mbelt-cosmos-streamer
 
-go 1.14
+go 1.15
 
 require (
-	github.com/cosmos/cosmos-sdk v0.37.14
-	github.com/cosmos/gaia v1.0.0
-	github.com/go-pg/migrations v6.7.3+incompatible
-	github.com/go-pg/pg v8.0.7+incompatible
-	github.com/go-redis/redis/v8 v8.4.0
-	github.com/gomodule/redigo v1.8.3
-	github.com/gorilla/websocket v1.4.2 // indirect
-	github.com/ipfs/go-cid v0.0.7
-	github.com/jinzhu/configor v1.2.0
-	github.com/jinzhu/inflection v1.0.0 // indirect
-	github.com/lib/pq v1.8.0
-	github.com/prometheus/common v0.9.1
+	github.com/cosmos/cosmos-sdk v0.41.3
+	github.com/cosmos/gaia/v4 v4.0.4
+	github.com/jinzhu/configor v1.2.1
+	github.com/lib/pq v1.9.0
+	github.com/prometheus/common v0.15.0
 	github.com/segmentio/kafka-go v0.3.7
-	github.com/spf13/cobra v1.1.1
+	github.com/spf13/cobra v1.1.3
 	github.com/spf13/viper v1.7.1
-	github.com/tendermint/go-amino v0.15.1 // indirect
-	github.com/tendermint/tendermint v0.32.13
-	google.golang.org/grpc/examples v0.0.0-20201112215255-90f1b3ee835b // indirect
-	mellium.im/sasl v0.2.1 // indirect
+	github.com/tendermint/tendermint v0.34.7
+	google.golang.org/grpc v1.35.0
 )
+
+replace google.golang.org/grpc => google.golang.org/grpc v1.33.2
+
+replace github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1

@@ -2,7 +2,6 @@ package worker
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
@@ -12,7 +11,6 @@ import (
 	"github.com/p2p-org/mbelt-cosmos-streamer/services"
 	"github.com/prometheus/common/log"
 	"github.com/spf13/cobra"
-	ctypes "github.com/tendermint/tendermint/rpc/core/types"
 	"github.com/tendermint/tendermint/types"
 )
 
@@ -51,10 +49,6 @@ func (s *Streamer) Start(config *config.Config) {
 		log.Fatalln(err)
 	}
 
-	if err = api.Connect(); err != nil {
-		log.Fatalln(err)
-	}
-
 	go func() {
 		var gracefulStop = make(chan os.Signal)
 		signal.Notify(gracefulStop, syscall.SIGTERM)
@@ -73,27 +67,25 @@ func (s *Streamer) Start(config *config.Config) {
 		for block := range api.SubscribeBlock(syncCtx) {
 			log.Infoln("Height:", block.Data.(types.EventDataNewBlock).Block.Header.Height)
 			newBlock := block.Data.(types.EventDataNewBlock).Block
-
 			go services.App().BlocksService().Push(newBlock)
 		}
 	}()
 
-	go func() {
-		for tx := range api.SubscribeTxs(syncCtx) {
-			log.Infoln("tx new -> ", fmt.Sprintf("%X %d", tx.Data.(types.EventDataTx).Tx.Hash(), tx.Data.(types.EventDataTx).Height))
-			txReform := tx.Data.(types.EventDataTx)
-
-			newTx := ctypes.ResultTx{
-				Hash:     txReform.Tx.Hash(),
-				Height:   txReform.Height,
-				Index:    txReform.Index,
-				TxResult: txReform.Result,
-				Tx:       txReform.Tx,
-				Proof:    types.TxProof{},
-			}
-			go services.App().TransactionsService().Push(&newTx)
-		}
-	}()
+	// go func() {
+	// 	for tx := range api.SubscribeTxs(syncCtx) {
+	// 		log.Infoln("tx new -> ", fmt.Sprintf("%X %d", tx.Data.(types.EventDataTx).Height, tx.Data.(types.EventDataTx).Height))
+	// 		txReform := tx.Data.(types.EventDataTx)
+	// 		newTx := ctypes.ResultTx{
+	// 			Hash:     []byte(""),
+	// 			Height:   txReform.Height,
+	// 			Index:    txReform.Index,
+	// 			TxResult: txReform.Result,
+	// 			Tx:       txReform.Tx,
+	// 			Proof:    types.TxProof{},
+	// 		}
+	// 		go services.App().TransactionsService().Push(&newTx)
+	// 	}
+	// }()
 
 	<-syncCtx.Done()
 	log.Infoln("mbelt-cosmos-streamer gracefully stopped")

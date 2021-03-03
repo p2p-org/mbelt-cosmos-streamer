@@ -26,7 +26,6 @@ func Init(config *config.Config, kafkaDs *datastore.KafkaDatastore, pgDs *pg.PgD
 }
 
 func (s *Service) Push(block *types.Block) {
-
 	defer func() {
 		if r := recover(); r != nil {
 			log.Infoln("[BlocksService][Recover]", "Throw panic", r)
@@ -50,15 +49,15 @@ func (s *Service) serialize(block *types.Block) map[string]interface{} {
 		"chain_id":        block.Header.ChainID,
 		"height":          uint64(block.Header.Height),
 		"time":            block.Header.Time.Unix(),
-		"num_tx":          uint64(block.Header.NumTxs),
+		"num_tx":          len(block.Txs),
 		"txs_hash":        utils.ToVarcharArray(txsHash),
-		"total_txs":       uint64(block.Header.TotalTxs),
+		"total_txs":       uint64(0),
 		"last_block_hash": block.Header.LastBlockID.Hash.String(),
 		"validator":       block.Header.ValidatorsHash.String(),
 		"status":          client.PendingStatus,
 	}
 
-	if uint64(block.Header.NumTxs) == 0 {
+	if len(block.Txs) == 0 {
 		result["status"] = client.ConfirmedStatus
 	}
 
