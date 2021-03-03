@@ -45,16 +45,16 @@ CREATE TABLE IF NOT EXISTS cosmos._blocks
 );
 
 
-CREATE TABLE IF NOT EXISTS cosmos.blocks_0
-(
-    UNIQUE (hash),
-    CHECK ( height BETWEEN 0 AND 100000)
-) INHERITS (cosmos.blocks);
-
-CREATE INDEX blocks_0_height_idx ON cosmos.blocks_0 (height);
-CREATE INDEX blocks_0_chain_id_idx ON cosmos.blocks_0 (chain_id);
-CREATE INDEX blocks_0_time_idx ON cosmos.blocks_0 (time);
-CREATE INDEX blocks_0_status_idx ON cosmos.blocks_0 (status);
+-- CREATE TABLE IF NOT EXISTS cosmos.blocks_0
+-- (
+--     UNIQUE (hash),
+--     CHECK ( height BETWEEN 0 AND 100000)
+-- ) INHERITS (cosmos.blocks);
+--
+-- CREATE INDEX blocks_0_height_idx ON cosmos.blocks_0 (height);
+-- CREATE INDEX blocks_0_chain_id_idx ON cosmos.blocks_0 (chain_id);
+-- CREATE INDEX blocks_0_time_idx ON cosmos.blocks_0 (time);
+-- CREATE INDEX blocks_0_status_idx ON cosmos.blocks_0 (status);
 
 -- CREATE OR REPLACE FUNCTION cosmos.blocks_insert_trigger() RETURNS TRIGGER AS
 -- $$

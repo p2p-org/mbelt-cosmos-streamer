@@ -9,7 +9,7 @@ import (
 	clientContext "github.com/cosmos/cosmos-sdk/client"
 	sdk "github.com/cosmos/cosmos-sdk/types/tx"
 	client2 "github.com/cosmos/cosmos-sdk/x/auth/client"
-	app "github.com/cosmos/gaia/v3/app"
+	app "github.com/cosmos/gaia/v4/app"
 	"github.com/p2p-org/mbelt-cosmos-streamer/config"
 	"github.com/prometheus/common/log"
 	client "github.com/tendermint/tendermint/rpc/client/http"

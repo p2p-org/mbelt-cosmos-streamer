@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/cosmos/cosmos-sdk/types/tx"
-	app "github.com/cosmos/gaia/v3/app"
+	app "github.com/cosmos/gaia/v4/app"
 	"github.com/p2p-org/mbelt-cosmos-streamer/client"
 	"github.com/p2p-org/mbelt-cosmos-streamer/config"
 	"github.com/p2p-org/mbelt-cosmos-streamer/datastore"
