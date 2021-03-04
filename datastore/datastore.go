@@ -50,6 +50,7 @@ func Init(config *config.Config) (*KafkaDatastore, error) {
 }
 
 func (ds *KafkaDatastore) Push(topic string, m map[string]interface{}) (err error) {
+	topicWithPrefix := strings.ToUpper(ds.config.KafkaPrefix) + "_" + topic
 	var (
 		kMsgs []kafka.Message
 	)
@@ -60,8 +61,8 @@ func (ds *KafkaDatastore) Push(topic string, m map[string]interface{}) (err erro
 		return errors.New("cannot push")
 	}
 
-	if _, ok := ds.kafkaWriters[topic]; !ok {
-		log.Println("[KafkaDatastore][Error][push]", "Kafka writer not initialized for topic", topic)
+	if _, ok := ds.kafkaWriters[topicWithPrefix]; !ok {
+		log.Println("[KafkaDatastore][Error][push]", "Kafka writer not initialized for topic", topicWithPrefix)
 	}
 
 	for key, value := range m {
@@ -80,7 +81,7 @@ func (ds *KafkaDatastore) Push(topic string, m map[string]interface{}) (err erro
 		return nil
 	}
 
-	err = ds.kafkaWriters[topic].WriteMessages(context.TODO(), kMsgs...)
+	err = ds.kafkaWriters[topicWithPrefix].WriteMessages(context.TODO(), kMsgs...)
 
 	if err != nil {
 		log.Println("[KafkaDatastore][Error][push]", "Cannot produce data", err)

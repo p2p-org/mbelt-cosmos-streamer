@@ -44,5 +44,5 @@ services:
       LOG_LEVEL: ${LOG_LEVEL}
       NODE_HOST: ${NODE_HOST}
       KAFKA_HOST: ${KAFKA_HOST}
-      KAFKA_PREFIX: ${APP_ID}_${APP_MODE}_${APP_NETWORK}
+      KAFKA_PREFIX: "${APP_ID}_${APP_MODE}_${APP_NETWORK}"
       PG_URL: ${PG_URL}
