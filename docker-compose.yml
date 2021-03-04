@@ -25,7 +25,7 @@ services:
       NODE_HOST: ${NODE_HOST}
       NODE_WS_PORT: ${NODE_WS_PORT}
       NODE_LCD_PORT: ${NODE_LCD_PORT}
-      KAFKA_HOSTS: '[broker:9092]'
+      KAFKA_HOSTS: ${KAFKA_HOSTS}
       PG_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?sslmode=disable
 
   cosmos-watcher:
@@ -42,7 +42,7 @@ services:
       NODE_HOST: ${NODE_HOST}
       NODE_WS_PORT: ${NODE_WS_PORT}
       NODE_LCD_PORT: ${NODE_LCD_PORT}
-      KAFKA_HOSTS: '[broker:9092]'
+      KAFKA_HOSTS: ${KAFKA_HOSTS}
       PG_URL:  postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?sslmode=disable
 
   cosmos-consistency:
@@ -54,12 +54,5 @@ services:
     environment:
       LOG_LEVEL: ${LOG_LEVEL}
       NODE_HOST: ${NODE_HOST}
-      KAFKA_HOSTS: '[broker:9092]'
+      KAFKA_HOSTS: ${KAFKA_HOSTS}
       PG_URL:  postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?sslmode=disable
-
-networks:
-  default:
-    driver: bridge
-    ipam:
-      config:
-        - subnet: 172.16.57.0/24
