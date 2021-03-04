@@ -10,8 +10,8 @@ type Config struct {
 		RPCPort       int    `default:"26657" env:"NODE_RPC_PORT"`
 		GRPCPort      int    `default:"9090" env:"NODE_RPC_PORT"`
 	}
-	KafkaHosts []string `required:"true" env:"KAFKA_HOSTS"`
-	PgUrl      string   `required:"true" env:"PG_URL"`
+	KafkaHost string `required:"true" env:"KAFKA_HOST"`
+	PgUrl     string `required:"true" env:"PG_URL"`
 
 	Watcher struct {
 		Worker      int   `env:"WATCHER_WORKER" default:"-1"`

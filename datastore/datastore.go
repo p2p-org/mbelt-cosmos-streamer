@@ -33,7 +33,7 @@ func Init(config *config.Config) (*KafkaDatastore, error) {
 	// , TopicMessages
 	for _, topic := range []string{TopicBlocks, TopicTransactions, TopicMessages} {
 		writer := kafka.NewWriter(kafka.WriterConfig{
-			Brokers:  ds.config.KafkaHosts,
+			Brokers:  []string{ds.config.KafkaHost},
 			Topic:    topic,
 			Balancer: &kafka.LeastBytes{},
 		})

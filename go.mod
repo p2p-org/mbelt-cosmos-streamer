@@ -11,7 +11,7 @@ require (
 	github.com/segmentio/kafka-go v0.3.7
 	github.com/spf13/cobra v1.1.3
 	github.com/spf13/viper v1.7.1
-	github.com/tendermint/tendermint v0.34.7
+	github.com/tendermint/tendermint v0.34.8
 	google.golang.org/grpc v1.35.0
 )
 
