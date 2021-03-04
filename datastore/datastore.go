@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"log"
+	"strings"
 
 	"github.com/p2p-org/mbelt-cosmos-streamer/config"
 	"github.com/segmentio/kafka-go"
@@ -12,9 +13,9 @@ import (
 
 const (
 	kafkaPartition    = 0
-	TopicBlocks       = "blocks_stream"
-	TopicMessages     = "messages_stream"
-	TopicTransactions = "transactions_stream"
+	TopicBlocks       = "BLOCKS_STREAM"
+	TopicMessages     = "MESSAGES_STREAM"
+	TopicTransactions = "TRANSACTIONS_STREAM"
 )
 
 type KafkaDatastore struct {
@@ -32,16 +33,17 @@ func Init(config *config.Config) (*KafkaDatastore, error) {
 	}
 	// , TopicMessages
 	for _, topic := range []string{TopicBlocks, TopicTransactions, TopicMessages} {
+		topicWithPrefix := strings.ToUpper(config.KafkaPrefix) + "_" + topic
 		writer := kafka.NewWriter(kafka.WriterConfig{
 			Brokers:  []string{ds.config.KafkaHost},
-			Topic:    topic,
+			Topic:    topicWithPrefix,
 			Balancer: &kafka.LeastBytes{},
 		})
 		if writer == nil {
 			return nil, errors.New("cannot create kafka writer")
 		}
 
-		ds.kafkaWriters[topic] = writer
+		ds.kafkaWriters[topicWithPrefix] = writer
 	}
 
 	return ds, nil
