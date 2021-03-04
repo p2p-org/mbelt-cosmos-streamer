@@ -5,6 +5,7 @@ go 1.15
 require (
 	github.com/cosmos/cosmos-sdk v0.41.4
 	github.com/cosmos/gaia/v4 v4.0.4
+	github.com/golang-migrate/migrate/v4 v4.14.1
 	github.com/jinzhu/configor v1.2.1
 	github.com/lib/pq v1.9.0
 	github.com/prometheus/common v0.15.0
