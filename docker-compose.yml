@@ -14,7 +14,7 @@ services:
       NODE_LCD_PORT: ${NODE_LCD_PORT}
       KAFKA_HOST: ${KAFKA_HOST}
       KAFKA_PREFIX: ${APP_ID}_${APP_MODE}_${APP_NETWORK}
-      PG_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?sslmode=disable
+      PG_URL: ${PG_URL}
 
   cosmos-watcher:
     build:
@@ -32,7 +32,7 @@ services:
       NODE_LCD_PORT: ${NODE_LCD_PORT}
       KAFKA_HOST: ${KAFKA_HOST}
       KAFKA_PREFIX: ${APP_ID}_${APP_MODE}_${APP_NETWORK}
-      PG_URL:  postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?sslmode=disable
+      PG_URL: ${PG_URL}
 
   cosmos-consistency:
     build:
@@ -45,4 +45,4 @@ services:
       NODE_HOST: ${NODE_HOST}
       KAFKA_HOST: ${KAFKA_HOST}
       KAFKA_PREFIX: ${APP_ID}_${APP_MODE}_${APP_NETWORK}
-      PG_URL:  postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?sslmode=disable
+      PG_URL: ${PG_URL}
