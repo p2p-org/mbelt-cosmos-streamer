@@ -86,10 +86,10 @@ KAFKA_CONNECT_URL="http://${KAFKA_HOST}:8083"
 KAFKA_SCHEMA_URL="http://${KAFKA_HOST}:8081"
 KAFKA_KSQL_DB_URL="http://${KAFKA_HOST}:8088"
 
-APP_MODE=dev
-APP_NETWORK=cosmos3
+APP_MODE=${APP_MODE}
+APP_NETWORK=${APP_NETWORK}
 
-APP_ID=cosmos_streamer
+APP_ID=${APP_ID}
 APP_PREFIX=$(echo "$APP_ID"_"$APP_MODE"_"$APP_NETWORK" | tr '[:lower:]' '[:upper:]')
 
 if [ -z "$POSTGRES_PORT" ]; then
