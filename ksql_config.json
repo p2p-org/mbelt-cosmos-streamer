@@ -14,7 +14,7 @@
     {
       "name": "{APP_PREFIX}_blocks_stream_avro_sink",
       "config": {
-        "topics": "{APP_PREFIX}_BLOCKS_STREAM",
+        "topics": "{APP_PREFIX}_BLOCKS_STREAM_AVRO",
         "errors.tolerance": "all",
         "insert.mode": "INSERT",
         "table.name.format": "cosmos._blocks",
@@ -25,7 +25,7 @@
     {
       "name": "{APP_PREFIX}_messages_stream_avro_sink",
       "config": {
-        "topics": "{APP_PREFIX}_MESSAGES_STREAM",
+        "topics": "{APP_PREFIX}_MESSAGES_STREAM_AVRO",
         "errors.tolerance": "all",
         "insert.mode": "INSERT",
         "table.name.format": "cosmos._messages",
@@ -36,7 +36,7 @@
     {
       "name": "{APP_PREFIX}_transactions_stream_avro_sink",
       "config": {
-        "topics": "{APP_PREFIX}_TRANSACTIONS_STREAM",
+        "topics": "{APP_PREFIX}_TRANSACTIONS_STREAM_AVRO",
         "errors.tolerance": "all",
         "insert.mode": "INSERT",
         "table.name.format": "cosmos._transactions",
@@ -46,3 +46,4 @@
     }
   ]
 }
+

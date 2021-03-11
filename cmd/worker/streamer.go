@@ -2,10 +2,12 @@ package worker
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
 
+	app "github.com/cosmos/gaia/v4/app"
 	"github.com/p2p-org/mbelt-cosmos-streamer/client"
 	"github.com/p2p-org/mbelt-cosmos-streamer/config"
 	"github.com/p2p-org/mbelt-cosmos-streamer/services"
@@ -13,6 +15,8 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/tendermint/tendermint/types"
 )
+
+var cdc, _ = app.MakeCodecs()
 
 type Streamer struct {
 	Cmd *cobra.Command
@@ -71,21 +75,18 @@ func (s *Streamer) Start(config *config.Config) {
 		}
 	}()
 
-	// go func() {
-	// 	for tx := range api.SubscribeTxs(syncCtx) {
-	// 		log.Infoln("tx new -> ", fmt.Sprintf("%X %d", tx.Data.(types.EventDataTx).Height, tx.Data.(types.EventDataTx).Height))
-	// 		txReform := tx.Data.(types.EventDataTx)
-	// 		newTx := ctypes.ResultTx{
-	// 			Hash:     []byte(""),
-	// 			Height:   txReform.Height,
-	// 			Index:    txReform.Index,
-	// 			TxResult: txReform.Result,
-	// 			Tx:       txReform.Tx,
-	// 			Proof:    types.TxProof{},
-	// 		}
-	// 		go services.App().TransactionsService().Push(&newTx)
-	// 	}
-	// }()
+	go func() {
+		for subTx := range api.SubscribeTxs(syncCtx) {
+			txReform := subTx.Data.(types.EventDataTx)
+
+			ddd := types.Tx(txReform.Tx)
+			log.Infoln("tx new -> ", fmt.Sprintf("%d - %X", subTx.Data.(types.EventDataTx).Height, ddd.Hash()))
+			hash := fmt.Sprintf("%X", ddd.Hash())
+			txResponse := api.GetTx(syncCtx, hash)
+
+			go services.App().TransactionsService().Push(txResponse)
+		}
+	}()
 
 	<-syncCtx.Done()
 	log.Infoln("mbelt-cosmos-streamer gracefully stopped")

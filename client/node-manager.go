@@ -105,7 +105,7 @@ func (nm *ClientApi) connectGrpc() error {
 }
 
 func (nm *ClientApi) SubscribeBlock(ctx context.Context) <-chan ctypes.ResultEvent {
-	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
 	defer cancel()
 	blocks, err := nm.wsClient.Subscribe(ctx, "test-client", blockQuery)
 	if err != nil {
@@ -115,12 +115,14 @@ func (nm *ClientApi) SubscribeBlock(ctx context.Context) <-chan ctypes.ResultEve
 }
 
 func (nm *ClientApi) SubscribeTxs(ctx context.Context) <-chan ctypes.ResultEvent {
-	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
 	defer cancel()
+
 	txs, err := nm.wsClient.Subscribe(ctx, "test-client", txQuery)
 	if err != nil {
 		log.Errorln(err)
 	}
+
 	return txs
 }
 
@@ -149,6 +151,7 @@ func (nm *ClientApi) GetTxsRpc(ctx context.Context, height int64) []*ctypes.Resu
 		log.Errorln(err)
 		return []*ctypes.ResultTx{}
 	}
+
 	return txs.Txs
 }
 

@@ -44,11 +44,11 @@ func Init(config *config.Config, ds *datastore.KafkaDatastore, pgDs *pg.PgDatast
 }
 
 func (s *Service) Push(txData *tx.GetTxResponse) {
-	// defer func() {
-	// 	if r := recover(); r != nil {
-	// 		log.Fatalln("[TransactionsService][Recover]", "Throw panic", r)
-	// 	}
-	// }()
+	defer func() {
+		if r := recover(); r != nil {
+			log.Fatalln("[TransactionsService][Recover]", "Throw panic", r)
+		}
+	}()
 	txPush := map[string]interface{}{}
 	txResult := s.serialize(txData)
 	msgs := txResult["messages_for_push"]
