@@ -1,6 +1,11 @@
 CREATE SCHEMA IF NOT EXISTS cosmos;
 
-CREATE TYPE status_enum AS ENUM ('pending', 'confirmed', 'rejected', 'onfork');
+DO $$
+    BEGIN
+        IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'status_enum') THEN
+            CREATE TYPE status_enum AS ENUM ('pending', 'confirmed', 'rejected', 'onfork');
+        END IF;
+END$$;
 
 CREATE TABLE IF NOT EXISTS cosmos.blocks
 (
@@ -16,17 +21,17 @@ CREATE TABLE IF NOT EXISTS cosmos.blocks
     "status"          status_enum,
     unique (hash, height)
     );
-CREATE INDEX blocks_height_index ON cosmos.blocks (height);
-CREATE INDEX blocks_chain_id_index ON cosmos.blocks (chain_id);
+CREATE INDEX IF NOT EXISTS blocks_height_index ON cosmos.blocks (height);
+CREATE INDEX IF NOT EXISTS blocks_chain_id_index ON cosmos.blocks (chain_id);
 
 
 -- Fix for unquoting varchar json
-CREATE OR REPLACE FUNCTION varchar_to_jsonb(varchar) RETURNS jsonb AS
-$$
-SELECT to_jsonb($1)
-           $$ LANGUAGE SQL;
-
-CREATE CAST (varchar as jsonb) WITH FUNCTION varchar_to_jsonb(varchar) AS IMPLICIT;
+-- CREATE OR REPLACE FUNCTION varchar_to_jsonb(varchar) RETURNS jsonb AS
+-- $$
+-- SELECT to_jsonb($1)
+--            $$ LANGUAGE SQL;
+--
+-- CREATE CAST (varchar as jsonb) WITH FUNCTION varchar_to_jsonb(varchar) AS IMPLICIT;
 
 -- Internal tables
 

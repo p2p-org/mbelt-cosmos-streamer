@@ -2,7 +2,7 @@ package config
 
 type Config struct {
 	LogLevel    string `env:"LOG_LEVEL" default:"info"`
-	ChainID     string `env:"CHAIN_ID" default:"cosmoshub-3"`
+	ChainID     string `env:"CHAIN_ID" default:"cosmoshub-4"`
 	KafkaPrefix string `env:"KAFKA_PREFIX" required:"true"`
 	Node        struct {
 		Host          string `required:"true" env:"NODE_HOST"`

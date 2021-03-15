@@ -131,7 +131,7 @@ func (s *Service) serialize(txData *tx.GetTxResponse) map[string]interface{} {
 		"block_height":   txData.TxResponse.Height,
 		"time":           timestamp.Unix(),
 		"tx_index":       0, // TODO add tx_index txData.TxResponse.Index,
-		"count_messages": len(messages),
+		"count_messages": len(txData.TxResponse.Logs),
 		"logs":           txData.TxResponse.RawLog,
 		"events":         txEvents,
 		"msgs":           messages,

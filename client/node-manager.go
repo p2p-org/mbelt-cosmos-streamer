@@ -180,7 +180,7 @@ func (nm *ClientApi) GetTxGrpc(ctx context.Context, hash string) *sdk.GetTxRespo
 	newTx, err := txClient.GetTx(ctx, &sdk.GetTxRequest{Hash: hash})
 	if err != nil {
 		log.Errorln(err)
-		return nil
+		return nm.GetTx(ctx, hash)
 	}
 	return newTx
 }

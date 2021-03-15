@@ -79,12 +79,13 @@ func (s *Streamer) Start(config *config.Config) {
 		for subTx := range api.SubscribeTxs(syncCtx) {
 			txReform := subTx.Data.(types.EventDataTx)
 
-			ddd := types.Tx(txReform.Tx)
-			log.Infoln("tx new -> ", fmt.Sprintf("%d - %X", subTx.Data.(types.EventDataTx).Height, ddd.Hash()))
-			hash := fmt.Sprintf("%X", ddd.Hash())
-			txResponse := api.GetTx(syncCtx, hash)
-
-			go services.App().TransactionsService().Push(txResponse)
+			txRaw := types.Tx(txReform.Tx)
+			log.Infoln("tx new -> ", fmt.Sprintf("%d - %X", subTx.Data.(types.EventDataTx).Height, txRaw.Hash()))
+			hash := fmt.Sprintf("%X", txRaw.Hash())
+			txResponse := api.GetTxGrpc(syncCtx, hash)
+			if txResponse != nil {
+				go services.App().TransactionsService().Push(txResponse)
+			}
 		}
 	}()
 
