@@ -38,8 +38,7 @@ type Api interface {
 	SubscribeBlock(ctx context.Context) <-chan ctypes.ResultEvent
 	SubscribeTxs(ctx context.Context) <-chan ctypes.ResultEvent
 	GetBlockRpc(ctx context.Context, height int64) *types.Block
-	GetTx(ctx context.Context, txHash string) *ctypes.ResultTx
-	GetTxGrpc(ctx context.Context, hash string) *ctypes.ResultTx
+	GetTx(ctx context.Context, txHash string) *sdk.GetTxResponse
 	GetTxsRpc(height int64) []*ctypes.ResultTx
 	Stop()
 	ResendBlock(blockHeight uint64)
@@ -156,31 +155,47 @@ func (nm *ClientApi) GetTxsRpc(ctx context.Context, height int64) []*ctypes.Resu
 }
 
 func (nm *ClientApi) GetTx(ctx context.Context, hash string) *sdk.GetTxResponse {
+	txResponse, err := nm.getTxGrpc(ctx, hash)
+	if err == nil {
+		return txResponse
+	}
+	log.Errorln(err)
+
+	txResponse, err = nm.getTxRpc(ctx, hash)
+	if err == nil {
+		return txResponse
+	}
+	log.Errorln(err)
+
+	return nil
+}
+
+func (nm *ClientApi) getTxRpc(ctx context.Context, hash string) (*sdk.GetTxResponse, error) {
 	queryTx, err := client2.QueryTx(nm.contextClient, hash)
 	if err != nil {
 		log.Errorln(err)
-		return nil
+		return nil, err
 	}
 
 	var newTx sdk.Tx
 	if err := cdc.UnmarshalBinaryBare(queryTx.Tx.Value, &newTx); err != nil {
 		log.Errorln(err)
-		return nil
+		return nil, err
 	}
 
 	return &sdk.GetTxResponse{
 		Tx:         &newTx,
 		TxResponse: queryTx,
-	}
+	}, nil
 }
 
-func (nm *ClientApi) GetTxGrpc(ctx context.Context, hash string) *sdk.GetTxResponse {
+func (nm *ClientApi) getTxGrpc(ctx context.Context, hash string) (*sdk.GetTxResponse, error) {
 	txClient := sdk.NewServiceClient(nm.grpcClient)
 
 	newTx, err := txClient.GetTx(ctx, &sdk.GetTxRequest{Hash: hash})
 	if err != nil {
 		log.Errorln(err)
-		return nm.GetTx(ctx, hash)
+		return nil, err
 	}
-	return newTx
+	return newTx, nil
 }

@@ -82,7 +82,7 @@ func (s *Streamer) Start(config *config.Config) {
 			txRaw := types.Tx(txReform.Tx)
 			log.Infoln("tx new -> ", fmt.Sprintf("%d - %X", subTx.Data.(types.EventDataTx).Height, txRaw.Hash()))
 			hash := fmt.Sprintf("%X", txRaw.Hash())
-			txResponse := api.GetTxGrpc(syncCtx, hash)
+			txResponse := api.GetTx(syncCtx, hash)
 			if txResponse != nil {
 				go services.App().TransactionsService().Push(txResponse)
 			}

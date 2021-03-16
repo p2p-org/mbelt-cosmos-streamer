@@ -119,7 +119,7 @@ func processingTx(ctx context.Context, wg *sync.WaitGroup, heightChan <-chan int
 		// 		services.App().TransactionsService().Push(tx)
 		// 	}
 		case hash := <-hashesChan:
-			tx := api.GetTxGrpc(ctx, hash)
+			tx := api.GetTx(ctx, hash)
 			if tx == nil {
 				continue
 			}
