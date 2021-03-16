@@ -173,13 +173,11 @@ func (nm *ClientApi) GetTx(ctx context.Context, hash string) *sdk.GetTxResponse 
 func (nm *ClientApi) getTxRpc(ctx context.Context, hash string) (*sdk.GetTxResponse, error) {
 	queryTx, err := client2.QueryTx(nm.contextClient, hash)
 	if err != nil {
-		log.Errorln(err)
 		return nil, err
 	}
 
 	var newTx sdk.Tx
 	if err := cdc.UnmarshalBinaryBare(queryTx.Tx.Value, &newTx); err != nil {
-		log.Errorln(err)
 		return nil, err
 	}
 
@@ -194,7 +192,6 @@ func (nm *ClientApi) getTxGrpc(ctx context.Context, hash string) (*sdk.GetTxResp
 
 	newTx, err := txClient.GetTx(ctx, &sdk.GetTxRequest{Hash: hash})
 	if err != nil {
-		log.Errorln(err)
 		return nil, err
 	}
 	return newTx, nil
