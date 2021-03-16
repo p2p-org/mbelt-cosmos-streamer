@@ -54,6 +54,7 @@ type ClientApi struct {
 	lcdURL        string
 	grpcURL       string
 	wsClient      *client.HTTP
+	txClient      sdk.ServiceClient
 	grpcClient    *grpc.ClientConn
 	contextClient clientContext.Context
 }
@@ -71,6 +72,8 @@ func (nm *ClientApi) Init(cfg *config.Config) error {
 	if err := nm.connectGrpc(); err != nil {
 		return err
 	}
+
+	nm.txClient = sdk.NewServiceClient(nm.grpcClient)
 
 	cctx := clientContext.Context{}
 	cctx = cctx.WithClient(nm.wsClient).WithTxConfig(app.MakeEncodingConfig().TxConfig)
@@ -188,9 +191,7 @@ func (nm *ClientApi) getTxRpc(ctx context.Context, hash string) (*sdk.GetTxRespo
 }
 
 func (nm *ClientApi) getTxGrpc(ctx context.Context, hash string) (*sdk.GetTxResponse, error) {
-	txClient := sdk.NewServiceClient(nm.grpcClient)
-
-	newTx, err := txClient.GetTx(ctx, &sdk.GetTxRequest{Hash: hash})
+	newTx, err := nm.txClient.GetTx(ctx, &sdk.GetTxRequest{Hash: hash})
 	if err != nil {
 		return nil, err
 	}
