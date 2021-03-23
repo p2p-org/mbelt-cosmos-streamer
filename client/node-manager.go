@@ -69,9 +69,9 @@ func (nm *ClientApi) Init(cfg *config.Config) error {
 		return err
 	}
 
-	if err := nm.connectGrpc(); err != nil {
-		return err
-	}
+	// if err := nm.connectGrpc(); err != nil {
+	// 	return err
+	// }
 
 	nm.txClient = sdk.NewServiceClient(nm.grpcClient)
 
@@ -158,13 +158,13 @@ func (nm *ClientApi) GetTxsRpc(ctx context.Context, height int64) []*ctypes.Resu
 }
 
 func (nm *ClientApi) GetTx(ctx context.Context, hash string) *sdk.GetTxResponse {
-	txResponse, err := nm.getTxGrpc(ctx, hash)
-	if err == nil {
-		return txResponse
-	}
-	log.Errorln(err)
+	// txResponse, err := nm.getTxGrpc(ctx, hash)
+	// if err == nil {
+	// 	return txResponse
+	// }
+	// log.Errorln(err)
 
-	txResponse, err = nm.getTxRpc(ctx, hash)
+	txResponse, err := nm.getTxRpc(ctx, hash)
 	if err == nil {
 		return txResponse
 	}

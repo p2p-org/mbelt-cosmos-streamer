@@ -3,7 +3,7 @@ module github.com/p2p-org/mbelt-cosmos-streamer
 go 1.15
 
 require (
-	github.com/cosmos/cosmos-sdk v0.42.0
+	github.com/cosmos/cosmos-sdk v0.42.2
 	github.com/cosmos/gaia/v4 v4.0.4
 	github.com/google/go-cmp v0.5.1 // indirect
 	github.com/jinzhu/configor v1.2.1
