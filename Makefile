@@ -8,4 +8,4 @@ reset:
 init-ksql:
 	docker-compose -f docker-compose.local.ksql.yml up -d
 migration:
-	docker run -v ${PWD}/migrations:/migrations --network host migrate/migrate -path=/migrations/ -database postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:5432/${POSTGRES_DB}\?sslmode=disable  up
+	docker run -v ${PWD}/migrations:/migrations --network host migrate/migrate -path=/migrations/ -database postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}\?sslmode=disable  up
