@@ -90,7 +90,7 @@ services:
       CONNECT_LOG4J_LOGGERS: org.apache.zookeeper=ERROR,org.I0Itec.zkclient=ERROR,org.reflections=ERROR
 
   control-center:
-    image: confluentinc/cp-enterprise-control-center:6.1.0
+    image: confluentinc/cp-enterprise-control-center:6.2.15
     hostname: control-center
     container_name: control-center
     depends_on:
