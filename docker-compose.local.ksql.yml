@@ -146,7 +146,7 @@ services:
       KSQL_OPTS: "-Dmax.request.size=1000000000"
 
   ksqldb-cli:
-    image: confluentinc/cp-ksqldb-cli:6.1.0
+    image: confluentinc/cp-ksqldb-cli:6.2.15
     container_name: ksqldb-cli
     depends_on:
       - broker
