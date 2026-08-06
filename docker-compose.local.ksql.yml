@@ -121,7 +121,7 @@ services:
 #      CONTROL_CENTER_OPTS: '-Djava.security.auth.login.config=/etc/control-center-auth/propertyfile.jaas'
 
   ksqldb-server:
-    image: confluentinc/cp-ksqldb-server:6.1.0
+    image: confluentinc/cp-ksqldb-server:6.2.15
     hostname: ksqldb-server
     container_name: ksqldb-server
     depends_on:
