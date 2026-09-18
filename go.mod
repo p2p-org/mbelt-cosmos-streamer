@@ -5,7 +5,6 @@ go 1.15
 require (
 	github.com/cosmos/cosmos-sdk v0.42.2
 	github.com/cosmos/gaia/v4 v4.0.4
-	github.com/google/go-cmp v0.5.1 // indirect
 	github.com/jinzhu/configor v1.2.1
 	github.com/lib/pq v1.9.0
 	github.com/prometheus/common v0.15.0
@@ -13,9 +12,9 @@ require (
 	github.com/spf13/cobra v1.1.3
 	github.com/spf13/viper v1.7.1
 	github.com/tendermint/tendermint v0.34.8
-	google.golang.org/grpc v1.35.0
+	google.golang.org/grpc v1.56.3
 )
 
-replace google.golang.org/grpc => google.golang.org/grpc v1.33.2
+replace google.golang.org/grpc => google.golang.org/grpc v1.56.3
 
 replace github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
