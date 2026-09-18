@@ -3,8 +3,8 @@ module github.com/p2p-org/mbelt-cosmos-streamer
 go 1.15
 
 require (
-	github.com/cosmos/cosmos-sdk v0.42.2
-	github.com/cosmos/gaia/v4 v4.0.4
+	github.com/cosmos/cosmos-sdk v0.42.4
+	github.com/cosmos/gaia/v4 v4.2.1
 	github.com/google/go-cmp v0.5.1 // indirect
 	github.com/jinzhu/configor v1.2.1
 	github.com/lib/pq v1.9.0
@@ -12,7 +12,7 @@ require (
 	github.com/segmentio/kafka-go v0.3.7
 	github.com/spf13/cobra v1.1.3
 	github.com/spf13/viper v1.7.1
-	github.com/tendermint/tendermint v0.34.8
+	github.com/tendermint/tendermint v0.34.9
 	google.golang.org/grpc v1.35.0
 )
 
