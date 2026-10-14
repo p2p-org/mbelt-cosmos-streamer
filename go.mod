@@ -8,7 +8,7 @@ require (
 	github.com/google/go-cmp v0.5.1 // indirect
 	github.com/jinzhu/configor v1.2.1
 	github.com/lib/pq v1.9.0
-	github.com/prometheus/common v0.15.0
+	github.com/prometheus/common v0.72.1
 	github.com/segmentio/kafka-go v0.3.7
 	github.com/spf13/cobra v1.1.3
 	github.com/spf13/viper v1.7.1
